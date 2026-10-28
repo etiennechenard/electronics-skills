@@ -7,6 +7,10 @@ file-based apps (`dotnet run tool.cs`)**.
 
 ## What the workflow is
 
+**Starting a project:** invoke the `pcb-as-code` skill in the destination
+folder — the (empty) directory that will hold the repository — and the
+agent runs the whole setup there.
+
 A new project starts with a short kickoff (step 0): a requirements
 interrogation that structures the repository and deploys the docs
 skeletons before any design work. Then one source file (`design.cs`)
