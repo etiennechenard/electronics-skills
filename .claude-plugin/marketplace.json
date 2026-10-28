@@ -1,0 +1,31 @@
+{
+  "name": "electronics-skills",
+  "owner": {
+    "name": "echenard"
+  },
+  "metadata": {
+    "description": "Agent skills for electronics — design, simulate, source parts, and drive lab instruments."
+  },
+  "plugins": [
+    {
+      "name": "micro-cap",
+      "source": "./micro-cap",
+      "description": "Run Micro-Cap 12 circuit simulations headlessly (batch mode): write SPICE netlists, run AC/transient/DC/distortion analyses and digital/mixed-signal logic (gates, flip-flops, 74xx families, power-up sequencing), and parse the numeric output files."
+    },
+    {
+      "name": "parts-search",
+      "source": "./parts-search",
+      "description": "Search electronic parts across DigiKey, Mouser, and Newark (element14) by MPN, distributor part code, or keyword — normalized stock, unit price at quantity, price breaks, lifecycle status, and product URLs where the vendor provides them, with an as-of timestamp; find variants and substitute candidates with explainable reasons; pull one part's full parameter table and datasheets; re-validate a shortlist of MPNs in one batch check; and set up, list, test, or clear vendor API keys in the Windows Credential Manager."
+    },
+    {
+      "name": "pcb-as-code",
+      "source": "./pcb-as-code",
+      "description": "Build hardware projects design-as-code: KiCad 10+ schematics and PCBs generated from a C# single source of truth, verified pin-by-pin against it, autorouted headlessly with FreeRouting, gated by ERC/DRC, and exported to fab gerbers/BOM/renders. Ships tested C# templates with an xUnit suite, plus an hw-review skill: multi-wave read-only reviewer sweeps over changed docs, design source, schematics and boards, triaged by the session, with fixes applied in the source and boards regenerated — never hand-edited."
+    },
+    {
+      "name": "visa",
+      "source": "./visa",
+      "description": "Control VISA-addressable lab instruments (DMMs, scopes, power supplies, signal generators) over GPIB, USB-TMC, Serial/ASRL, or TCPIP/LXI — send SCPI commands, read measurements, control the bus, read/write VISA attributes, do USB-TMC control transfers, and move binary block payloads to/from files."
+    }
+  ]
+}

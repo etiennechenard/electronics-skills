@@ -1,0 +1,5 @@
+{
+  "name": "pcb-as-code",
+  "version": "0.3.0",
+  "description": "Build hardware projects design-as-code: KiCad 10+ schematics and PCBs generated from a C# single source of truth, verified pin-by-pin against it, autorouted headlessly with FreeRouting, gated by ERC/DRC, and exported to fab gerbers/BOM/renders — with project tooling in C# .NET 10 file-based apps (dotnet run tool.cs). Ships tested C# templates (s-expressions, design model, kicad-cli gates, board-file reader, Specctra DSN writer + FreeRouting driver + SES reader, fab limits fetched into fab.json and checked by fabcheck) with an xUnit suite, plus an hw-review skill: multi-wave sweeps of cheap read-only reviewer agents over the changed docs, design source, schematics and boards (renders included, pin maps checked against part datasheets), triaged by the session, with fixes applied in the source and the boards regenerated — never hand-edited."
+}

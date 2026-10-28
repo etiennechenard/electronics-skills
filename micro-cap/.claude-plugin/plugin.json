@@ -1,0 +1,8 @@
+{
+  "name": "micro-cap",
+  "version": "1.1.0",
+  "description": "Claude Code plugin for running Micro-Cap 12 circuit simulations headlessly via its batch mode: write SPICE netlists, run AC/transient/DC/distortion analyses and digital/mixed-signal logic (gates, flip-flops, 74xx families, power-up sequencing), and parse the numeric output files.",
+  "author": {
+    "name": "kosmic"
+  }
+}

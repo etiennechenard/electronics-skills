@@ -1,0 +1,5 @@
+{
+  "name": "parts-search",
+  "version": "0.2.0",
+  "description": "Search electronic parts across DigiKey, Mouser, and Newark (element14) by MPN, distributor part code, or keyword — normalized stock, unit price at quantity, price breaks, lifecycle status, and product URLs where the vendor provides them, with an as-of timestamp; find variants and substitute candidates with explainable reasons; pull one part's full parameter table and datasheets; re-validate a shortlist of MPNs in one batch check; and set up, list, test, or clear vendor API keys in the Windows Credential Manager."
+}

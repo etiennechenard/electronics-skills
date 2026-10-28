@@ -1,0 +1,5 @@
+{
+  "name": "visa",
+  "version": "1.0.1",
+  "description": "Claude Code plugin for controlling VISA-addressable laboratory instruments (GPIB, USB-TMC, Serial/ASRL, TCPIP/LXI) via SCPI commands through a single-binary C# CLI tool."
+}

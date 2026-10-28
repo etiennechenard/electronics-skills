@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <!-- The templates are plain include-files; compile them here directly so
+       these tests exercise exactly the code the project scripts #:include. -->
+  <ItemGroup>
+    <Compile Include="..\templates\sexpr.cs" Link="sexpr.cs" />
+    <Compile Include="..\templates\design.cs" Link="design.cs" />
+    <Compile Include="..\templates\kicad.cs" Link="kicad.cs" />
+    <Compile Include="..\templates\specctra.cs" Link="specctra.cs" />
+    <Compile Include="..\templates\boardfile.cs" Link="boardfile.cs" />
+    <Compile Include="..\templates\dsn.cs" Link="dsn.cs" />
+    <Compile Include="..\templates\fab.cs" Link="fab.cs" />
+  </ItemGroup>
+
+</Project>
