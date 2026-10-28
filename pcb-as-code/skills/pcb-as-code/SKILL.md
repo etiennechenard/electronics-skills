@@ -1,160 +1,83 @@
 ---
 name: pcb-as-code
-description: Build hardware projects design-as-code — KiCad 10+ schematics and PCBs generated from a C# single source of truth, verified pin-by-pin against it, autorouted headlessly with FreeRouting, gated by ERC/DRC, and exported to fab gerbers/BOM/renders, with project tooling in C# (.NET 10 file-based apps, dotnet run tool.cs). Use when starting a new hardware/PCB project on this pattern (one design.cs source of truth, generated .kicad_sch/.kicad_pcb, C# tools in pcb/tools), or when working in a project already built this way — including adding parts or nets, regenerating boards, rerouting, verifying, and exporting for fabrication.
+description: Build hardware design-as-code — KiCad 10+ schematics and PCBs generated from a C# design.cs single source of truth, pin-verified, autorouted with FreeRouting, ERC/DRC-gated and exported for fab, with tooling as .NET 10 file-based apps (dotnet run tool.cs) in pcb/tools. Use to start a hardware/PCB project on this pattern or to work in one (generated .kicad_sch/.kicad_pcb) — adding parts or nets, regenerating, rerouting, verifying, fab export.
 ---
 
 # pcb-as-code
 
-A hardware workflow where **the design lives in code and KiCad files are
-build outputs**: one source file holds every part, footprint and net;
-generators write the schematic libraries, schematics and placed boards from
-it; an autorouter puts copper on; a verifier cross-checks every pin of every
-schematic and board against the source; an exporter refuses anything that is
-not clean. Nothing is ever hand-edited in KiCad — a lasting change goes into
-the source or a generator, and everything regenerates.
+**The design lives in code; KiCad files are build outputs.** One source file holds every part, footprint and net; generators write the libraries, schematics and placed boards from it; FreeRouting puts copper on; a verifier cross-checks every pin against the source; an exporter refuses anything not clean. Proven end to end on a multi-board RF instrument. New projects copy the tested templates below and write their own generators on top — one entry file per stage in `pcb/tools/`: `gen_lib.cs`, `gen_schematics.cs`, `gen_<board>.cs`, `route.cs`, `verify.cs`, `export.cs`.
 
-The pattern is proven end to end in C# on a production build, a
-multi-board RF instrument: every stage, from design.cs to the fab zip,
-including a full FreeRouting run of a dense board. The pipeline tooling is
-**C#: .NET 10 file-based apps run with `dotnet run tool.cs`**. New projects
-copy the tested templates shipped here and write their generators on top:
-- the board writer;
-- the schematic writer and its self-checks;
-- the route, verify and export tools.
-
-`references/pipeline-steps.md` gives the facts each of them needs.
-
-This file is the map; the stage-by-stage detail lives in `references/`
-(next to this file) — read the file named for the stage you are working.
+This file is the map; read the reference named for the stage you are working (paths relative to this file).
 
 ## Hard rules
 
-1. **The shipped tooling is C#.** The shipped tools are single-entry C#
-   file-based apps: `dotnet run tool.cs -- <args>` (`.NET SDK ≥ 10.0.300`
-   for `#:include`; this machine has 10.0.401). Shared code lives in plain
-   library `.cs` files pulled in with `#:include` — types only, no
-   top-level statements.
-2. **The design file is the single source of truth.** Parts, footprints and
-   nets exist in exactly one place (`design.cs`). Schematics, boards, BOMs
-   and verification all derive from it. If a KiCad file and the design
-   disagree, the design wins and the KiCad file is regenerated.
-3. **Regenerate, never hand-edit.** Generators overwrite the KiCad files.
-   Hand edits in KiCad are thrown away on the next run and only surface as
-   verify failures. (Opening files in KiCad to LOOK is fine and encouraged
-   before ordering.)
-4. **Every stage gates.** Schematic drawing self-checks → ERC 0 errors
-   0 warnings → netlist parity pin-by-pin vs the design → DRC 0 errors
-   0 unrouted → `FAB PROBLEMS: 0` (fabcheck) → only then export. The
-   exporter re-checks the gates and refuses stale or dirty boards.
-5. **Tests first for the tooling.** The templates ship with an xUnit suite;
-   after copying them into a project, keep them running
-   (`dotnet test pcb/tools/tests`) and extend the design tests for the
-   project's real design.cs.
+1. **The tooling is C#**: single-entry .NET 10 file-based apps, `dotnet run tool.cs -- <args>` (SDK ≥ 10.0.300 for `#:include`). Shared code lives in library `.cs` files pulled in with `#:include` — types only, no top-level statements.
+2. **`design.cs` is the single source of truth.** Schematics, boards, BOMs and verification derive from it; when a KiCad file disagrees, the design wins and the file is regenerated.
+3. **Regenerate, never hand-edit.** Hand edits in KiCad are overwritten on the next run and surface only as verify failures. Opening files in KiCad to LOOK is encouraged before ordering.
+4. **Every stage gates**: drawing self-checks → ERC 0 errors 0 warnings → netlist parity pin-by-pin → DRC 0 errors 0 unrouted → `FAB PROBLEMS: 0` → export. The exporter re-checks and refuses stale or dirty boards.
+5. **Tests first for the tooling**: keep the copied xUnit suite green (`dotnet test pcb/tools/tests`) and extend the design tests for the project's real design.cs.
 
-## The pipeline at a glance
+## The pipeline
 
-| Step | Produces | Gate | Detail |
+| Step | Produces | Gate | Read |
 |---|---|---|---|
-| 0. kickoff | interrogation, repo layout, templates copied, design.cs skeleton, fab.json fetched, docs skeletons | templates proven: smoke + unit tests pass | `references/kickoff.md` |
-| 1. design.cs | the single source of truth | design tests extended | `references/pipeline-steps.md` |
-| 2. gen_lib | project symbol/footprint libraries | kicad-cli upgrade clean | `references/pipeline-steps.md` |
-| 3. gen_schematics | one .kicad_sch per board | ERC 0 errors 0 warnings + drawing self-checks | `references/pipeline-steps.md` |
-| 4. gen_pcb | placed, symbol-linked boards | footprint ↔ symbol links; project rules ≥ fab.json (`FabCheck.Project`) | `references/pipeline-steps.md` |
-| 5. route | FreeRouting copper + GND stitching | DRC 0 errors, 0 unrouted | `references/pipeline-steps.md` |
-| 6. verify | pin-parity vs design.cs | TOTAL PROBLEMS: 0 | `references/pipeline-steps.md` |
-| 7. export | gerbers, drill, pos, BOM, renders | exporter refuses stale/dirty boards and `FAB PROBLEMS` > 0 | `references/pipeline-steps.md` |
-| 8. firmware + docs | PlatformIO firmware, docs complete | native host tests | `references/pipeline-steps.md` |
-| review | wave-swept fresh-eyes review of docs, schematics and boards (this plugin's `hw-review` skill) | confirmed fixes land in `design.cs`/generators/docs, boards regenerated, gates re-run — never hand-edited | `references/pipeline-steps.md` §Review; the `hw-review` skill |
+| 0. kickoff | interrogation, repo layout, templates copied, design.cs skeleton, fab.json, docs skeletons | smoke + unit tests pass | `references/kickoff.md` |
+| 1. design.cs | the single source of truth | design tests extended | `references/step1-design.md` |
+| 2. gen_lib | project symbol/footprint libraries | kicad-cli upgrade clean | `references/step2-3-libraries-schematics.md` |
+| 3. gen_schematics | one .kicad_sch per board | ERC 0/0 + drawing self-checks | `references/step2-3-libraries-schematics.md` |
+| 4. gen_pcb | placed, symbol-linked boards + .kicad_pro | footprint ↔ symbol links; `FabCheck.Project` empty | `references/step4-pcb.md` |
+| 5. route | FreeRouting copper + GND stitching | DRC 0 errors, 0 unrouted | `references/step5-route.md` |
+| 6. verify | pin-parity vs design.cs | `TOTAL PROBLEMS: 0` | `references/step6-7-verify-export.md` |
+| 7. export | gerbers, drill, pos, BOM, renders | refuses stale/dirty boards, `FAB PROBLEMS` > 0 | `references/step6-7-verify-export.md` |
+| 8. firmware + docs | PlatformIO firmware, docs complete | native host tests | `references/step8-firmware-docs.md` |
+| review | multi-wave fresh-eyes sweep of docs, source, schematics, boards | fixes in source, regenerated, gates re-run | the `hw-review` skill (`${CLAUDE_PLUGIN_ROOT}/skills/hw-review/`) |
 
-The gates hold the mechanical line at every step; the **review sweep** is
-the deep pass the gates cannot be: waves of cheap read-only reviewers over
-the changed docs, design source, schematics and boards (renders included,
-pin maps checked against the parts' actual datasheets), triaged by the
-session, fixes applied in the source and regenerated. Run it **before a
-fab order** and after any large change — the proven experience is it takes
-several waves to find and fix everything.
+**Review** is the deep pass the gates cannot be (datasheet conformance, docs↔design↔board consistency, enclosure, renders): run `hw-review` once the schematics generate clean (a wrong pin found before routing saves a re-route), after step 8 before ordering with a budget ≥ 6, and after any large change — it takes several waves to find everything.
 
-## Toolchain facts (this machine)
+## Toolchain (this machine)
 
 | Tool | Fact |
 |---|---|
-| KiCad 10.0.7 (recommended) | `C:\Program Files\KiCad\10.0\bin\kicad-cli.exe` — the known-good default in `kicad.cs`; set `KICAD_CLI` (or assign `Cli.Exe`) to use anything newer. The CLI surface and JSON report formats used here have been stable; re-run the test suite (its live kicad-cli tests run against whatever `KICAD_CLI` points at) to confirm a new install |
-| kicad-cli used for | `sch erc`, `sch export netlist`, `sch export pdf`, `sch/sym/fp upgrade --force`, `pcb drc`, `pcb export gerbers/drill/pos/svg`, `pcb render`, `pcb upgrade` |
-| Zone fills | `pcb drc` and `pcb export gerbers` refill zones in memory when needed (documented for both; the drc half verified on 10.0.7 against a fill-stripped board — re-check when adopting a newer KiCad) — the board file keeps what was saved. `pcb drc --refill-zones --save-board` writes the fills into the file (verified on 10.0.7: the `filled_polygon`s stitching reads with `Board.ZoneFills`). PDF/SVG exports do NOT refill: render a board saved that way |
-| Templates and boards | treated as s-expression text — no pcbnew dependency. KiCad 10 boards reference nets by name (`(net "GND")`, no net table) |
-| Specctra DSN | kicad-cli has NO DSN export — `dsn.cs` writes it from the board text |
-| FreeRouting | known-good default 1.4.5.1: jar `C:\tools\freerouting-1.4.5.1\freerouting-1.4.5.1.jar`, Java 17+ at `C:\tools\jdk-25.0.4.1+1-jre\bin\java.exe` (defaults in `specctra.cs`; `Route` takes java/jar overrides). The `-de/-do/-mp/-mt` CLI is unchanged in 2.x — e.g. 2.5 (needs Java 25, which this JRE is) routes the same command line |
-| .NET 10 SDK | 10.0.401 — file-based apps with `#:include` work |
-| PlatformIO | `pio run` builds firmware; native host tests for the firmware core (`firmware/test/native`) |
+| KiCad 10.0.7 | `C:\Program Files\KiCad\10.0\bin\kicad-cli.exe`, the default in `kicad.cs`; `KICAD_CLI` (or `Cli.Exe`) for a newer one — re-run the test suite to confirm it |
+| kicad-cli | `sch erc`, `sch export netlist/pdf`, `sch/sym/fp upgrade --force`, `pcb drc`, `pcb export gerbers/drill/pos/svg`, `pcb render`, `pcb upgrade` |
+| Zone fills | `pcb drc` and `pcb export gerbers` refill in memory (documented for both, verified for drc on 10.0.7 — re-check on a newer KiCad); `pcb drc --refill-zones --save-board` writes fills into the file (read with `Board.ZoneFills`). PDF/SVG exports do NOT refill — render a board saved that way |
+| Board text | s-expressions, no pcbnew dependency; KiCad 10 references nets by name (`(net "GND")`, no net table) |
+| Specctra DSN | kicad-cli has NO DSN export — `dsn.cs` writes it |
+| FreeRouting | 1.4.5.1 known-good default: `C:\tools\freerouting-1.4.5.1\freerouting-1.4.5.1.jar`, Java 17+ at `C:\tools\jdk-25.0.4.1+1-jre\bin\java.exe` (defaults in `specctra.cs`; `Route(java:, jar:)` overrides). 2.x takes the same CLI (2.5 needs Java 25) |
+| .NET SDK | 10.0.401 |
+| PlatformIO | `pio run`; native host tests in `firmware/test/native` |
 
-## Templates (shipped, tested)
+## Templates (`templates/`, shipped, tested)
 
 | File | Provides |
 |---|---|
-| `sexpr.cs` | S-expression reader/writer (`Sx`): parse real schematics/boards/footprints/SES, diff-stable dump, `Find`/`FindAll`/`S` builders. Round-trip-verified on real KiCad files up to 1.2 MB |
-| `design.cs` | The single-source-of-truth model (`Design`): `Comp`, `Board`, `Boards` registry, `Flag`, `ExpectedPins` — with a worked example board |
-| `kicad.cs` | `Kicad`: kicad-cli runner (known-good default install; `KICAD_CLI` env override for newer KiCad) + the three gates — `Erc`, `Drc` (JSON reports, `Clean(allowStarvedThermal:)`), `ExportNetlist`/`Netlist.Read` |
-| `specctra.cs` | `Specctra`: `Dsn.BumpClearances`, `Dsn.Shuffle` (seeded), `FreeRouting.Route` (headless, `-mt 1` default, java/jar parameters for other versions), `Ses.ReadRoutes` (nm-scaled, y-negated wires + vias) |
-| `boardfile.cs` | `PcbFile`: a .kicad_pcb read as text — `Board.Load`, footprints with pads in absolute nm (`BPad.Position`, `Drill`, `LibAngle`), tracks/vias/zones (`ZoneFills`: the saved fills), `RoutedCopper(drop:)`, `EdgeContours`, `Courtyard`, `Contains` (KiCad's edge rule), `Segment`/`Via` builders, `Save` (+ `pcb upgrade`) |
-| `dsn.cs` | `Specctra.DsnWriter`: the DSN FreeRouting reads, written the way pcbnew's ExportSpecctraDSN writes it (`Write`), net classes and hole clearance from the .kicad_pro (`Project`) |
-| `fab.cs` | `Fab`: `FabRules` loaded from the project's `pcb/fab.json` (the fab's limits, fetched from its capability page, each with the page's quote and a check date) and `FabCheck.Project` / `FabCheck.Board` (see `references/fabrication.md`) |
-| `fabcheck.cs` | the fab gate, from the project root: `dotnet run pcb/tools/fabcheck.cs -- pcb/fab.json pcb/<board>.kicad_pcb...` → `FAB PROBLEMS: n` |
-| `smoke.cs` | 30-second proof the include path works: `dotnet run smoke.cs` from its folder (`dotnet run pcb/tools/smoke.cs` from a project's root) |
+| `sexpr.cs` | `Sx`: s-expression reader/writer for schematics/boards/footprints/SES, diff-stable dump, `Find`/`FindAll`/`S` builders |
+| `design.cs` | `Design`: `Comp`, `Board`, `Boards` registry, `Flag`, `ExpectedPins` — with a worked example board |
+| `kicad.cs` | `Kicad`: kicad-cli runner + gates — `Erc`, `Drc` (JSON, `Clean(allowStarvedThermal:)`), `ExportNetlist`/`Netlist.Read` |
+| `specctra.cs` | `Specctra`: `Dsn.BumpClearances`, `Dsn.Shuffle` (seeded), `FreeRouting.Route` (headless, `-mt 1`), `Ses.ReadRoutes` |
+| `boardfile.cs` | `PcbFile`: `Board.Load`, pads in absolute nm (`BPad.Position`, `Drill`, `LibAngle`), tracks/vias/zones (`ZoneFills`), `RoutedCopper(drop:)`, `EdgeContours`, `Courtyard`, `Contains`, `Segment`/`Via` builders, `Save` |
+| `dsn.cs` | `Specctra.DsnWriter`: pcbnew-style DSN (`Write`), net classes + hole clearance from the .kicad_pro (`Project`) |
+| `fab.cs` | `Fab`: `FabRules` from `pcb/fab.json`, `FabCheck.Project` / `FabCheck.Board` |
+| `fabcheck.cs` | fab gate: `dotnet run pcb/tools/fabcheck.cs -- pcb/fab.json pcb/<board>.kicad_pcb...` → `FAB PROBLEMS: n` |
+| `smoke.cs` | proves the include path: `dotnet run pcb/tools/smoke.cs` |
 
-Unit tests live in `${CLAUDE_PLUGIN_ROOT}/skills/pcb-as-code/tests/` and
-compile the templates directly (plus live kicad-cli integration tests on
-synthetic boards — they early-return, reporting as passed, when KiCad is
-absent; and `dotnet run` tests of smoke.cs and fabcheck.cs, which find the
-tools in both the plugin's and a project's layout):
-
-```
-dotnet test "${CLAUDE_PLUGIN_ROOT}/skills/pcb-as-code/tests"
-```
-
-Step 0 (`references/kickoff.md`) copies templates and tests into the new
-project; keep the suite running there and extend the design tests for the
-project's real design.cs.
+The xUnit suite in `tests/` compiles the templates directly (live kicad-cli tests early-return as passed when KiCad is absent): `dotnet test "${CLAUDE_PLUGIN_ROOT}/skills/pcb-as-code/tests"`. Kickoff copies templates and tests into the project.
 
 ## Gotchas (each paid for on a real build)
 
-- FreeRouting: 1.4.5.1 is the known-good default (adopt a newer version
-  only head-to-head, see `references/pipeline-steps.md`); `-mt 1` by
-  default; shuffle the DSN per retry; bump clearances 15%; expect ~40 min
-  per attempt on a dense board.
-- KiCad always writes the same DSN order — without shuffling, a retry
-  is a rerun of the same failure.
-- ERC/DRC `--severity-all`: warnings count. A DRC silk warning is a
-  placement fix in the generator, not a waiver. (fabcheck's silkscreen
-  warnings, silk below the fab's limit, do not gate: see fabrication.md.)
-- The DRC report must be newer than the .kicad_pcb or the exporter must
-  refuse (stale gate).
-- DRC reports always go through `kicad-cli pcb drc --format json`; the
-  in-process route (pcbnew.WriteDRCReport) aborts outside the GUI.
-- Locked (generator) copper is contract: FreeRouting sees locked tracks
-  and vias as fixed wiring (locked arcs are not written to the DSN: draw
-  generator copper as segments), copper-copy keeps it, routing re-runs
-  keep it.
-- Off-board part pins are unverifiable by construction — keep their net
-  maps right in the design and wire them via on-board connectors.
-- Fab limits come from the fab, never from memory or a copy: fetch the
-  capability page into `pcb/fab.json`, every value next to the page's own
-  words, then let code hold the project to it (`FabCheck` in gen_pcb,
-  `fabcheck.cs` before export). They drift, and they depend on the
-  process (a mask bridge can depend on the mask colour). fabcheck fails on a `fab.json` checked over 90 days ago.
-- Two `dotnet run` of the same .cs at once share one build output: the
-  second fails on a locked exe. Run one instance per tool, or a copy of
-  the file.
-- Panels replacing enclosure end plates: legends outside, mounting screws
-  bonding GND, no through-hole leads (unless the one special part), check
-  the outline against the physical case before anything else.
+- FreeRouting: `-mt 1`, bump clearances 15%, shuffle the DSN per retry (one writer = one order, so an unshuffled retry repeats the failure); ~40 min per attempt on a dense board. Details: `references/step5-route.md`.
+- ERC/DRC run `--severity-all`: warnings count. A DRC silk warning is a placement fix in the generator, not a waiver (fabcheck's silk warnings do not gate).
+- DRC reports only via `kicad-cli pcb drc --format json` (pcbnew.WriteDRCReport aborts outside the GUI); a report older than its board is a stale gate.
+- Locked generator copper is contract: FreeRouting keeps locked tracks and vias as fixed wiring, and copper-copy and routing re-runs keep it; locked arcs are not written to the DSN — draw generator copper as segments.
+- Off-board part pins are unverifiable by construction — keep their net maps right in the design, wired via on-board connectors.
+- Fab limits come from the fab's page, never from memory — they drift and depend on the process, mask colour included (`references/fabrication.md`); fabcheck fails on a `fab.json` checked over 90 days ago.
+- Two `dotnet run` of the same .cs at once fail on a locked exe — one instance per tool.
+- Panels replacing enclosure end plates: legends outside, mounting screws bonding GND, no through-hole leads (unless the one special part), check the outline against the physical case first.
 
-## References
+## Other references
 
 | File | Read when |
 |---|---|
-| `references/kickoff.md` | starting a new project (step 0): interrogation, scaffold, docs |
-| `references/pipeline-steps.md` | working any of steps 1-8, or running the review sweep |
 | `references/project-structure.md` | repository layout, AGENTS.md convention |
 | `references/fabrication.md` | choosing the fab, fetching its limits into fab.json, the fab checks |
 | `references/dotnet-conventions.md` | writing the C# file-based apps |
-| `${CLAUDE_PLUGIN_ROOT}/skills/hw-review/` | the multi-wave review sweep itself — before a fab order, after a large change |

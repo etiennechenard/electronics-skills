@@ -45,7 +45,7 @@ using Sx;
     `dsn.cs` and the `Ses` reader both do.
 - **KiCad 10 board text.** Nets are referenced by name (`(net "GND")`) and
   there is no net table. A pad's `(at x y a)` is local to its footprint
-  while its angle is absolute. See `pipeline-steps.md` step 4 for the flip
+  while its angle is absolute. See `step4-pcb.md` for the flip
   transform.
 - **One run per tool at a time.** Two `dotnet run` of the same .cs at once
   share one build output, and the second fails on the locked exe. Run tools

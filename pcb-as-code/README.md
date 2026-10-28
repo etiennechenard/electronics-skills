@@ -31,17 +31,18 @@ unasked — the workflow itself stays documented once, in the skill.
 ```
 ├── agents/
 │   ├── hw-reviewer-glm.md      the sweep's read-only reviewer twins
-│   └── hw-reviewer-claude.md   (identical bodies): each harness's cheap
-│                               fast model at max effort, no write tools,
-│                               no shell, datasheet-capable
-│                               (WebFetch/WebSearch)
+│   └── hw-reviewer-claude.md   (identical bodies: rules, check lists,
+│                               grades, report format): each harness's
+│                               cheap fast model at high effort, no write
+│                               tools, no shell, datasheet-capable
 └── skills/
     ├── pcb-as-code/
     │   ├── SKILL.md         the map: rules, pipeline at a glance, toolchain
     │   │                    facts, templates, gotchas — detail in references/
-    │   ├── references/      stage detail read on demand: kickoff, pipeline
-    │   │                    steps 1-8 + review, project structure + AGENTS.md,
-    │   │                    fabrication, dotnet conventions
+    │   ├── references/      stage detail read on demand, one file per
+    │   │                    step or step pair (kickoff, step1 … step8), project
+    │   │                    structure + AGENTS.md, fabrication, dotnet
+    │   │                    conventions
     │   ├── templates/       tested C# copied into new projects' pcb/tools/:
     │   │     sexpr.cs       KiCad s-expression reader/writer (sch/pcb/mod/SES)
     │   │     design.cs      single-source-of-truth model (Comp/Board/ExpectedPins)
@@ -60,13 +61,14 @@ unasked — the workflow itself stays documented once, in the skill.
     │                        fabcheck.cs in either layout
     └── hw-review/           the multi-wave review sweep (its own skill,
                              runs on ZCode and Claude Code):
-         ├── SKILL.md        routing: phases, non-negotiables, when to use
+         ├── SKILL.md        routing: non-negotiables, when not to use
          └── references/
-             └── wave-protocol.md  the playbook: budget + wave cut, per-surface
-                                  check lists (docs / design source / boards +
-                                  renders / datasheet pin checks), the stamped
-                                  shard prompt, triage, the fix-and-regenerate
-                                  cycle, the wave log, the final report
+             ├── wave-protocol.md  the playbook: scope, budget + wave cut, the
+             │                    stamped shard prompt (variable part only;
+             │                    diffs and wave log handed over as scratch
+             │                    files), triage, the fix-and-regenerate
+             │                    cycle, the wave log, the final report
+             └── zcode-wall-clock.md  ZCode-only background-shard deadline
 ```
 
 Run the tests: `dotnet test skills/pcb-as-code/tests`

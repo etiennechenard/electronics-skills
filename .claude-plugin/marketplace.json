@@ -1,8 +1,5 @@
 {
   "name": "electronics-skills",
-  "owner": {
-    "name": "echenard"
-  },
   "metadata": {
     "description": "Agent skills for electronics — design, simulate, source parts, and drive lab instruments."
   },

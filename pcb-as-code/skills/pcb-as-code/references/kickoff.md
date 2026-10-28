@@ -81,4 +81,4 @@ by the step that owns it:
 | assembly.md | enclosure checks, build order, bring-up checks to fill in | 8 |
 | routing-comparison.md | only created when FreeRouting versions are compared | 5 |
 
-Then continue with step 1 (`pipeline-steps.md`).
+Then continue with step 1 (`step1-design.md`).
