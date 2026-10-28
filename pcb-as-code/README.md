@@ -7,9 +7,12 @@ file-based apps (`dotnet run tool.cs`)**.
 
 ## What the workflow is
 
-**Starting a project:** invoke the `pcb-as-code` skill in the destination
-folder — the (empty) directory that will hold the repository — and the
-agent runs the whole setup there.
+**Starting a project:** with the plugin installed, open the destination
+folder — the (empty) directory that will hold the repository — as the
+working directory in ZCode or Claude Code, and type `/pcb-as-code`
+(equivalently, just describe the hardware project you want: the skill
+also triggers from its description). The agent runs the whole setup
+there — the kickoff, the repository scaffold and the docs skeletons.
 
 A new project starts with a short kickoff (step 0): a requirements
 interrogation that structures the repository and deploys the docs
