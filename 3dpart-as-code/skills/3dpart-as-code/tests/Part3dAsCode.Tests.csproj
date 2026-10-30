@@ -10,6 +10,8 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
     <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="ClosedXML" Version="0.105.1" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="5.9.0" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
@@ -27,6 +29,8 @@
     <Compile Include="..\templates\stl.cs" Link="stl.cs" />
     <Compile Include="..\templates\checks.cs" Link="checks.cs" />
     <Compile Include="..\templates\raster.cs" Link="raster.cs" />
+    <Compile Include="..\templates\partedit.cs" Link="partedit.cs" />
+    <Compile Include="..\templates\paramsheet.cs" Link="paramsheet.cs" />
   </ItemGroup>
 
   <!-- In a project, example/ keeps the worked example (part.cs, bracket.py)

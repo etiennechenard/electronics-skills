@@ -1,6 +1,8 @@
 // Review views as PNG in build/renders/: each printed body in print
 // orientation (iso, front, top, right), the assembly without the coupons
-// (both isos, front, top), and in reproduce mode each measured body with its numbered
+// (both isos, front, top), each annotated body with its parameters drawn as
+// numbered dimension lines (the numbers the parameter sheet's # column
+// shows), and in reproduce mode each measured body with its numbered
 // callouts — the sheet the calipers fill in. Refuses a stale build.
 //
 //   dotnet run mech/tools/render.cs [-- --mech <dir>]
@@ -53,6 +55,19 @@ foreach (var b in m.Bodies.Where(b => b.Kind != BodyKind.Coupon))
     asm.Add(Stl.Load(l.AsmStl(b.Name)), colour[b.Name]);
 foreach (var v in new[] { View.Iso, View.IsoBack, View.Front, View.Top })
     Save(asm, v, "assembly", m.Name);
+foreach (var g in m.Annotations.GroupBy(a => a.Body))
+{
+    var s = new Scene().Add(Stl.Load(l.AsmStl(g.Key)), colour[g.Key]);
+    foreach (var a in g)
+    {
+        var label = m.Label(a.Param)!;
+        var from = new V3(a.From.X, a.From.Y, a.From.Z);
+        var to = a.To is { } t ? new V3(t.X, t.Y, t.Z) : from;
+        s.Dim(new DimLine(label, from, to));
+    }
+    foreach (var v in views)
+        Save(s, v, $"{g.Key}-dims", $"{g.Key} parameters");
+}
 foreach (var g in m.Measurements.GroupBy(x => x.Body))
 {
     var s = new Scene().Add(Stl.Load(l.AsmStl(g.Key)), colour[g.Key]);

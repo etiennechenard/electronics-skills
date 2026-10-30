@@ -28,6 +28,12 @@ public readonly record struct Rgb(byte R, byte G, byte B)
 
 public sealed record Callout(string Label, V3 At);
 
+/// A dimension line From..To with its label at the middle.
+/// A dimension line From..To with its label at the middle; From == To is a
+/// single labelled point. Left out of a view where it is hidden behind the
+/// part or seen end-on.
+public sealed record DimLine(string Label, V3 From, V3 To);
+
 public sealed class Image(int w, int h)
 {
     public int W { get; } = w;
@@ -70,6 +76,18 @@ public sealed class Image(int w, int h)
     }
 
     public static int TextWidth(string s, int scale = 2) => s.Length * 6 * scale - scale;
+
+    /// A straight line `thick` pixels wide.
+    public void Line(double x0, double y0, double x1, double y1, Rgb c, int thick = 2)
+    {
+        var steps = (int)Math.Ceiling(Math.Max(Math.Abs(x1 - x0), Math.Abs(y1 - y0)));
+        for (var i = 0; i <= steps; i++)
+        {
+            var t = steps == 0 ? 0 : i / (double)steps;
+            int x = (int)Math.Round(x0 + (x1 - x0) * t) - thick / 2, y = (int)Math.Round(y0 + (y1 - y0) * t) - thick / 2;
+            Fill(x, y, x + thick, y + thick, c);
+        }
+    }
 
     public void SavePng(string path)
     {
@@ -167,6 +185,7 @@ public sealed class Scene
 {
     readonly List<(Stl Mesh, Rgb Color)> _items = [];
     readonly List<Callout> _callouts = [];
+    readonly List<DimLine> _dims = [];
 
     public Scene Add(Stl mesh, Rgb? color = null)
     {
@@ -177,6 +196,12 @@ public sealed class Scene
     public Scene Mark(Callout c)
     {
         _callouts.Add(c);
+        return this;
+    }
+
+    public Scene Dim(DimLine d)
+    {
+        _dims.Add(d);
         return this;
     }
 
@@ -210,8 +235,10 @@ public sealed class Scene
             img.Text(12, 12, title + " (EMPTY)", Rgb.Ink);
             return img;
         }
-        double sx0 = all.Min(p => p.Dot(r)), sx1 = all.Max(p => p.Dot(r));
-        double sy0 = all.Min(p => p.Dot(u)), sy1 = all.Max(p => p.Dot(u));
+        // frame the marks too, so a dimension line set off the part stays in view
+        var frame = all.Concat(_callouts.Select(c => c.At)).Concat(_dims.SelectMany(dl => new[] { dl.From, dl.To })).ToList();
+        double sx0 = frame.Min(p => p.Dot(r)), sx1 = frame.Max(p => p.Dot(r));
+        double sy0 = frame.Min(p => p.Dot(u)), sy1 = frame.Max(p => p.Dot(u));
         var margin = Math.Min(48, Math.Min(w, h) / 8);
         var scale = Math.Min((w - 2 * margin) / Math.Max(sx1 - sx0, 1e-9), (h - 2 * margin) / Math.Max(sy1 - sy0, 1e-9));
         var cx = w / 2.0 - (sx0 + sx1) / 2 * scale;
@@ -281,14 +308,55 @@ public sealed class Scene
         for (var i = 0; i < line.Length; i++)
             if (line[i]) img.Set(i % w, i / w, Rgb.Ink);
 
-        foreach (var c in _callouts)
+        // labels and lines scale with the image, so they stay legible when
+        // the picture is shown small (the parameter sheet's panel)
+        var ts = Math.Max(2, w / 300);
+        bool Hidden(V3 p)
         {
-            var (x, y, _) = Project(c.At);
-            var tw = Image.TextWidth(c.Label);
-            int bx = (int)x - tw / 2 - 5, by = (int)y - 12;
-            img.Fill(bx - 1, by - 1, bx + tw + 11, by + 25, Rgb.White);
-            img.Fill(bx, by, bx + tw + 10, by + 24, Rgb.Marker);
-            img.Text(bx + 5, by + 5, c.Label, Rgb.White);
+            var (x, y, z) = Project(p);
+            int px = (int)x, py = (int)y;
+            if (px < 0 || py < 0 || px >= w || py >= h) return false;
+            var dz = depth[py * w + px];
+            return double.IsFinite(dz) && dz < z - 0.5;
+        }
+        var labels = _callouts.Select(c => { var (x, y, _) = Project(c.At); return (c.Label, X: x, Y: y); }).ToList();
+        foreach (var dl in _dims)
+        {
+            var mid = (dl.From + dl.To) * 0.5;
+            if (Hidden(mid))
+                continue;
+            var (ax, ay, _) = Project(dl.From);
+            var (bx, by, _) = Project(dl.To);
+            var span = Math.Sqrt((bx - ax) * (bx - ax) + (by - ay) * (by - ay));
+            var point = (dl.To - dl.From).Length == 0;
+            if (!point && span < 8 * ts)
+                continue;
+            var (lx, ly, _) = Project(mid);
+            if (!point)
+            {
+                double ux = -(by - ay) / span, uy = (bx - ax) / span;
+                if (uy > 0 || (uy == 0 && ux < 0))
+                    (ux, uy) = (-ux, -uy);   // off to the upper side, or right of a vertical line
+                double nx = ux * 4 * ts, ny = uy * 4 * ts;
+                img.Line(ax, ay, bx, by, Rgb.Marker, ts);
+                img.Line(ax - nx, ay - ny, ax + nx, ay + ny, Rgb.Marker, ts);
+                img.Line(bx - nx, by - ny, bx + nx, by + ny, Rgb.Marker, ts);
+                // a line shorter than its label would vanish under it: label beside it
+                if (span < Image.TextWidth(dl.Label, ts) + 10 * ts)
+                    (lx, ly) = (lx + ux * 10 * ts, ly + uy * 10 * ts);
+            }
+            labels.Add((dl.Label, lx, ly));
+        }
+
+        foreach (var (label, x, y) in labels)
+        {
+            int tw = Image.TextWidth(label, ts), th = 7 * ts, pad = 2 * ts;
+            // kept inside the picture and clear of the title line
+            int bx = Math.Clamp((int)x - tw / 2 - pad, 1, Math.Max(1, w - tw - 2 * pad - 2));
+            int by = Math.Clamp((int)y - th / 2 - pad, 32, Math.Max(32, h - th - 2 * pad - 2));
+            img.Fill(bx - 1, by - 1, bx + tw + 2 * pad + 1, by + th + 2 * pad + 1, Rgb.White);
+            img.Fill(bx, by, bx + tw + 2 * pad, by + th + 2 * pad, Rgb.Marker);
+            img.Text(bx + pad, by + pad, label, Rgb.White, ts);
         }
 
         // scale bar: a round length near a fifth of the width

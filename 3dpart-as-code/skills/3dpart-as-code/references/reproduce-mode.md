@@ -48,15 +48,22 @@ are cosmetic. Then write the model:
 Build and render: `render.cs` writes `<body>-callouts-*.png`, the part
 with a red numbered marker on every feature to measure. Put
 `Model.SheetMarkdown()` (the measurement table) in `docs/mech.md` and send
-the user the callout renders plus the table.
+the user the callout renders plus the table (or the sheet).
 
 ## 4. Measuring
 
-Ask the user to measure each critical dimension three times and give the
-median; calipers, not a ruler, for anything critical; inside jaws for
-holes and slots, depth rod for depths; note anything worn, deformed or
-broken. Transcribe each value into its parameter: `Source: Measured`,
-`Ref: "D3"`. Cosmetic dimensions may stay estimated from the photos or
+Ask the user to measure each critical dimension three times; calipers, not
+a ruler, for anything critical; inside jaws for holes and slots, depth rod
+for depths; note anything worn, deformed or broken.
+
+**Through the Measurements sheet** (`sheet.cs`, see `step5-render-coupons.md`):
+the callout renders sit below the table, and the user types up to three
+readings per row in R1-R3 and saves. `sheet.cs -- pull` writes the median
+into the parameter with `Source: Measured` and `Ref: "<id>: <r1> / <r2> /
+<r3>"` (the filled readings only: for example `"D3: 6.18 / 6.21 / 6.2"`, or
+`"D3: 6.2"` for one reading). A spread wider than the parameter's tolerance
+is a warning, not a refusal. Without the sheet, ask for the median of the
+three readings and transcribe it yourself: `Source: Measured`, `Ref: "D3"`. Cosmetic dimensions may stay estimated from the photos or
 scan (`Chosen`, not critical).
 
 The DIM gate's source rule fails every critical parameter that is still

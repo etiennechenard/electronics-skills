@@ -39,6 +39,33 @@ public class ModelTests : IDisposable
     }
 
     [Fact]
+    public void Validate_checksAnnotations()
+    {
+        var m = new Model
+        {
+            Name = "t",
+            Envelope = new(100, 50, 40),
+            Params = [new("w", 10), new("r", 2)],
+            Bodies = [new("box", "parts/box.py")],
+            Annotations =
+            [
+                new("w", "box", (0, 0, 0), (9, 0, 0)),
+                new("w", "box", (0, 0, 0), (10, 0, 0)),
+                new("r", "nope", (1, 1, 1)),
+                new("ghost", "box", (0, 0, 0)),
+            ],
+        };
+        var bad = string.Join("\n", m.Validate());
+        Assert.Contains("annotation of 'w' defined 2 times", bad);
+        Assert.Contains("annotation of w: the line is 9 mm long, the parameter is 10 mm", bad);
+        Assert.Contains("annotation of r: no body 'nope'", bad);
+        Assert.Contains("annotation of ghost: no parameter 'ghost'", bad);
+        Assert.Equal("1", m.Label("w"));
+        Assert.Equal("2", m.Label("r"));
+        Assert.Null(new Model { Name = "t", Envelope = new(1, 1, 1), Params = [new("w", 1)], Bodies = [] }.Label("w"));
+    }
+
+    [Fact]
     public void Validate_catchesBrokenReferencesAndValues()
     {
         var m = new Model

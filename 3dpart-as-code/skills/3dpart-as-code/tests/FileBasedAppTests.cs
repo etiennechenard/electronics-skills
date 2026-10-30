@@ -1,4 +1,8 @@
 using System.Diagnostics;
+using ClosedXML.Excel;
+using Mech;
+using ParamSheet;
+using Part;
 using Xunit;
 
 namespace Part3dAsCode.Tests;
@@ -109,6 +113,136 @@ public class FileBasedAppTests : IDisposable
         Assert.Equal(1, rc);
         Assert.Contains("broken on purpose", o);
         Assert.Contains("parts/bracket.py: failed", o);
+    }
+
+    [Fact]
+    public async Task SheetPull_writesTheEditsIntoPartCs()
+    {
+        if (!DotnetOnPath() || !TestMeshes.CompiledModelIsTheExample)
+            return;
+        var mech = Scaffold();
+        var part = Path.Combine(mech, "tools", "part.cs");
+        var before = File.ReadAllText(part);
+        var layout = new Layout(mech);
+        var written = Sheet.Write(PartDesign.Model, before, layout, []);
+        Assert.Empty(written.Problems);
+        EditSheet(layout.Sheet, ("Parameters", "bracket.w", 42.0), ("Fits", "slip", 0.25));
+
+        var (rc, o, e) = await Run(Path.Combine(mech, "tools", "sheet.cs"), "pull", "--mech", mech);
+        Assert.True(rc == 0, $"sheet pull: {o}{e}");
+        Assert.Contains("bracket.w: 40.0 -> 42.0", o);
+        Assert.Contains("slip: 0.2 -> 0.25", o);
+        Assert.Contains("PULL PROBLEMS: 0", o);
+        Assert.Contains("rebuild: build, check, fit, render, sheet", o);
+
+        var after = File.ReadAllText(part);
+        var changed = before.Split('\n').Zip(after.Split('\n')).Where(z => z.First != z.Second).Select(z => z.Second.Trim()).ToList();
+        Assert.Equal(2, changed.Count);
+        Assert.Contains(changed, c => c.StartsWith("new(\"bracket.w\", 42.0,"));
+        Assert.Contains(changed, c => c.StartsWith("new(\"slip\", 0.25,"));
+
+        (rc, o, e) = await Run(Path.Combine(mech, "tools", "sheet.cs"), "pull", "--mech", mech);
+        Assert.True(rc == 0, $"second pull: {o}{e}");
+        Assert.Contains("nothing to pull", o);
+        Assert.Contains("PULL PROBLEMS: 0", o);
+    }
+
+    [Fact]
+    public async Task SheetPull_refusesALockedEditAndWritesNothing()
+    {
+        if (!DotnetOnPath() || !TestMeshes.CompiledModelIsTheExample)
+            return;
+        var mech = Scaffold();
+        var part = Path.Combine(mech, "tools", "part.cs");
+        var before = File.ReadAllText(part);
+        var layout = new Layout(mech);
+        Assert.Empty(Sheet.Write(PartDesign.Model, before, layout, []).Problems);
+        EditSheet(layout.Sheet, ("Parameters", "bracket.w", 42.0), ("Parameters", "hole.d", 7.0));
+
+        var (rc, o, _) = await Run(Path.Combine(mech, "tools", "sheet.cs"), "pull", "--mech", mech);
+        Assert.Equal(1, rc);
+        Assert.Contains("hole.d: locked (derived: pin.d + 2 x slip)", o);
+        Assert.Contains("PULL PROBLEMS: 1", o);
+        Assert.Equal(before, File.ReadAllText(part));
+
+        File.Delete(layout.Sheet);
+        (rc, o, _) = await Run(Path.Combine(mech, "tools", "sheet.cs"), "pull", "--mech", mech);
+        Assert.Equal(1, rc);
+        Assert.Contains("no params.xlsx (run sheet.cs)", o);
+    }
+
+    [Fact]
+    public async Task Export_printsSheetProblemsAsAscii()
+    {
+        if (!DotnetOnPath() || !TestMeshes.CompiledModelIsTheExample)
+            return;
+        var mech = Scaffold();
+        var layout = new Layout(mech);
+        Assert.Empty(Sheet.Write(PartDesign.Model, File.ReadAllText(Path.Combine(mech, "tools", "part.cs")), layout, []).Problems);
+        EditSheet(layout.Sheet, ("Parameters", "hole.d", 7.0));
+
+        var (rc, o, _) = await Tool(mech, "export");
+        Assert.Equal(1, rc);
+        Assert.Contains("pin.d + 2 x slip", o);
+        Assert.All(o, c => Assert.True(c < 128, $"non-ASCII character U+{(int)c:X4} in the export output"));
+    }
+
+    [Fact]
+    public async Task Sheet_editPullRebuildLoop_andExportRefusesUnpulledEdits()
+    {
+        if (!DotnetOnPath() || Pac() is null)
+            return;
+        var mech = Scaffold();
+        var layout = new Layout(mech);
+        foreach (var step in new[] { "build", "check", "fit", "render" })
+        {
+            var (rc0, o0, e0) = await Tool(mech, step);
+            Assert.True(rc0 == 0, $"{step}: {o0}{e0}");
+        }
+
+        var (rc, o, e) = await Tool(mech, "sheet");
+        Assert.True(rc == 0, $"sheet: {o}{e}");
+        Assert.Contains("SHEET PROBLEMS: 0", o);
+        Assert.True(File.Exists(layout.Sheet));
+
+        EditSheet(layout.Sheet, ("Parameters", "bracket.w", 42.0));
+        (rc, o, _) = await Tool(mech, "sheet");
+        Assert.Equal(1, rc);
+        Assert.Contains("bracket.w: sheet value 42.0 not pulled", o);
+        Assert.Contains("pull them first", o);
+
+        (rc, o, _) = await Tool(mech, "export");
+        Assert.Equal(1, rc);
+        Assert.Contains("SHEET bracket.w: sheet value 42.0 not pulled", o);
+        Assert.Contains("EXPORT REFUSED", o);
+
+        (rc, o, e) = await Run(Path.Combine(mech, "tools", "sheet.cs"), "pull", "--mech", mech);
+        Assert.True(rc == 0, $"pull: {o}{e}");
+        Assert.Contains("bracket.w: 40.0 -> 42.0", o);
+
+        foreach (var step in new[] { "build", "check", "fit", "render" })
+        {
+            var (rc1, o1, e1) = await Tool(mech, step);
+            Assert.True(rc1 == 0, $"{step} after pull: {o1}{e1}");
+        }
+        Assert.Equal(42, Checks.Probes.Load(layout)["bracket.bbox.x"], 6);
+
+        (rc, o, e) = await Tool(mech, "sheet");
+        Assert.True(rc == 0, $"sheet after pull: {o}{e}");
+        (rc, o, e) = await Tool(mech, "export");
+        Assert.True(rc == 0, $"export after pull: {o}{e}");
+    }
+
+    /// Change cells of a generated sheet the way a user would in Excel.
+    private static void EditSheet(string path, params (string Sheet, string Name, double Value)[] edits)
+    {
+        using var wb = new XLWorkbook(path);
+        foreach (var (sheet, name, value) in edits)
+        {
+            var nameCol = sheet == "Parameters" ? 2 : 1;   // Parameters leads with the # column
+            wb.Worksheet(sheet).RowsUsed().Skip(1).First(r => r.Cell(nameCol).GetString() == name).Cell(nameCol + 1).Value = value;
+        }
+        wb.Save();
     }
 
     [Fact]

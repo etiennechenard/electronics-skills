@@ -2,18 +2,23 @@
 // (parts and coupons), assembly.step, the renders, and manifest.json
 // (sha256, size, print-orientation size, volume per file). Re-runs the DIM,
 // MESH and FIT gates from the build's own files and refuses anything stale
-// or dirty — out/ only ever holds a clean build.
+// or dirty — out/ only ever holds a clean build. A params.xlsx holding
+// edits that were never pulled into part.cs refuses too.
 //
 //   dotnet run mech/tools/export.cs [-- --mech <dir>]
 
 #:sdk Microsoft.NET.Sdk
 #:property TargetFramework=net10.0
 #:property NoWarn=CA2266
+#:package ClosedXML@0.105.1
+#:package Microsoft.CodeAnalysis.CSharp@5.9.0
 #:include partmodel.cs
 #:include part.cs
 #:include mech.cs
 #:include stl.cs
 #:include checks.cs
+#:include partedit.cs
+#:include paramsheet.cs
 
 using System.Security.Cryptography;
 using System.Text.Json;
@@ -21,6 +26,7 @@ using System.Text.Json.Nodes;
 using Checks;
 using Mech;
 using Mesh;
+using ParamSheet;
 using Part;
 using PartModel;
 
@@ -40,10 +46,24 @@ if (problems.Count == 0)
     problems.AddRange(Gates.Meshes(m, l, probes, []).Select(p => $"MESH {p}"));
     problems.AddRange(Gates.Fit(m, l).Select(p => $"FIT {p}"));
 }
+// Windows pipes default to the OEM code page; keep the console text ASCII.
+static string Ascii(string s) =>
+    string.Concat(s.Replace("×", "x").Select(c => c < 128 ? c : '?'));
+
+var unpulled = new List<string>();
+if (File.Exists(l.Sheet))
+{
+    var read = Sheet.Read(l.Sheet, m, File.ReadAllText(Path.Combine(l.Tools, "part.cs")));
+    unpulled.AddRange(read.Edits.Select(e => $"SHEET {e.Name}: sheet value {PartEdit.Literals.Format(e.To)} not pulled"));
+    unpulled.AddRange(read.Problems.Select(p => $"SHEET {Ascii(p)}"));
+    problems.AddRange(unpulled);
+}
 if (problems.Count > 0)
 {
     Gates.Report("EXPORT", problems);
     Console.WriteLine("EXPORT REFUSED: rebuild and re-run the gates (build, check, fit, render)");
+    if (unpulled.Count > 0)
+        Console.WriteLine("params.xlsx holds edits not in part.cs: run sheet.cs -- pull, or delete mech/params.xlsx to discard them");
     return 1;
 }
 

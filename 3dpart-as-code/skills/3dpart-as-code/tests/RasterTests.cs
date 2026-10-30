@@ -50,6 +50,35 @@ public class RasterTests : IDisposable
     }
 
     [Fact]
+    public void DimLine_isDrawnWhereItCanBeRead_andLeftOutEndOn()
+    {
+        int Red(View v)
+        {
+            var s = new Scene().Add(MeshOf(Box(0, 0, 0, 10, 10, 10)))
+                .Dim(new DimLine("1", new V3(0, -2, 12), new V3(10, -2, 12)));
+            var img = s.Render(v, 200, 160);
+            var red = 0;
+            for (var y = 0; y < img.H; y++)
+                for (var x = 0; x < img.W; x++)
+                    if (img.Get(x, y) == Rgb.Marker) red++;
+            return red;
+        }
+        Assert.True(Red(View.Front) > 200, $"{Red(View.Front)} marker pixels seen from the front");
+        Assert.Equal(0, Red(View.Right));
+    }
+
+    [Fact]
+    public void DimLine_hiddenBehindThePartIsLeftOut()
+    {
+        var s = new Scene().Add(MeshOf(Box(0, 0, 0, 10, 10, 10)))
+            .Dim(new DimLine("1", new V3(2, 12, 5), new V3(8, 12, 5)));
+        var img = s.Render(View.Front, 200, 160);
+        for (var y = 0; y < img.H; y++)
+            for (var x = 0; x < img.W; x++)
+                Assert.NotEqual(Rgb.Marker, img.Get(x, y));
+    }
+
+    [Fact]
     public void Callout_drawsAMarker()
     {
         var s = new Scene().Add(MeshOf(Box(0, 0, 0, 10, 10, 10))).Mark(new Callout("D1", new V3(5, 0, 5)));

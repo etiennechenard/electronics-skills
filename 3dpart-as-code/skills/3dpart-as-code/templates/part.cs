@@ -21,7 +21,15 @@ public static class PartDesign
         // Assembly coordinates: the base plate lies on z = 0, the upright
         // stands at y = 0..upright.t, x is centred.
         var pinD = new Param("pin.d", 6.0, Tol: 0.05, Critical: true, Note: "the pin's diameter; sets the hole");
-        var slip = Fits.Slip;
+        // The fits: one literal gap per line, so each can be tuned from the sheet.
+        Fit[] fits =
+        [
+            new("press", 0.05, "interference-ish: driven in, holds by friction"),
+            new("snug", 0.10, "by hand, no play"),
+            new("slip", 0.20, "slides or turns freely, little play"),
+            new("loose", 0.35, "drops in, visible play"),
+        ];
+        var slip = fits.First(f => f.Name == "slip");
         Param[] ps =
         [
             new("bracket.w", 40.0, Tol: 0.2),
@@ -41,10 +49,35 @@ public static class PartDesign
             new("screw.z", 20.0, Tol: 0.1),
             new("coupon.margin", 4.0, Note: "material kept around the hole in its coupon"),
         ];
+        // Where each number sits, for the labelled views and the sheet's #
+        // column: a span is a dimension line (its length is the value),
+        // a single point a marker. Lines float a few mm off the faces.
+        double V(string name) => P(ps, name).Value;
+        double w = V("bracket.w"), d = V("base.d"), t = V("base.t"), h = V("upright.h"), ut = V("upright.t");
+        double hd = V("hole.d"), hy = V("hole.y"), sd = V("screw.d"), sx = V("screw.x"), sz = V("screw.z");
+        double pd = V("pin.d"), pl = V("pin.l"), pinTop = t / 2 + pl / 2;
+        Annotation[] annotations =
+        [
+            new("bracket.w", "bracket", (-w / 2, -3, h + 3), (w / 2, -3, h + 3)),
+            new("base.d", "bracket", (w / 2 + 3, 0, -3), (w / 2 + 3, d, -3)),
+            new("base.t", "bracket", (w / 2 + 3, d + 3, 0), (w / 2 + 3, d + 3, t)),
+            new("upright.h", "bracket", (-w / 2 - 3, -3, 0), (-w / 2 - 3, -3, h)),
+            new("upright.t", "bracket", (-w / 2 - 3, 0, h + 3), (-w / 2 - 3, ut, h + 3)),
+            new("fillet.r", "bracket", (w / 2, ut + 1, t + 1)),
+            new("hole.d", "bracket", (-hd / 2, hy, t + 1), (hd / 2, hy, t + 1)),
+            new("hole.y", "bracket", (-hd / 2 - 4, 0, t + 1), (-hd / 2 - 4, hy, t + 1)),
+            new("screw.d", "bracket", (sx - sd / 2, -15, sz), (sx + sd / 2, -15, sz)),
+            new("screw.x", "bracket", (0, -9, sz + sd / 2 + 3), (sx, -9, sz + sd / 2 + 3)),
+            new("screw.z", "bracket", (-sx - sd / 2 - 3, -3, 0), (-sx - sd / 2 - 3, -3, sz)),
+            new("pin.d", "pin", (-pd / 2, hy, pinTop + 2), (pd / 2, hy, pinTop + 2)),
+            new("pin.l", "pin", (pd / 2 + 3, hy, pinTop - pl), (pd / 2 + 3, hy, pinTop)),
+            new("pin.chamfer", "pin", (pd / 2, hy, pinTop)),
+        ];
         return new Model
         {
             Name = "bracket",
             Envelope = new(220, 220, 250),
+            Fits = fits,
             Params = ps,
             Bodies =
             [
@@ -67,6 +100,7 @@ public static class PartDesign
             // in from above without touching
             Clearances = [new("pin", "bracket", slip.Gap * 0.75, "radial slip gap")],
             Sweeps = [new("pin", (0, 0, 25), ["bracket"], slip.Gap * 0.75, Note: "dropped in from above")],
+            Annotations = annotations,
         };
     }
 

@@ -43,19 +43,19 @@ Create the layout (see `project-structure.md`), then:
   - the worked example a second time, as the pipeline test's fixture:
     `templates/part.cs` and `templates/parts/bracket.py` →
     `mech/tools/tests/example/` (the csproj never compiles that folder).
-- **Rewrite the csproj for the project's layout.** It compiles the six
+- **Rewrite the csproj for the project's layout.** It compiles the eight
   libraries by relative path, `..\templates\<name>.cs` in the plugin; in
   `mech/tools/tests/` they become `..\partmodel.cs`, `..\part.cs`, and so
   on. Never a bare `..\*.cs` glob: it would also compile the entry files'
   top-level statements.
 - **Ignore the generated and local files:** `mech/.venv/`, `mech/build/`,
-  `mech/tools/tests/bin/`, `mech/tools/tests/obj/`. `mech/out/` IS committed
+  `mech/params.xlsx`, `mech/~$params.xlsx`, `mech/params.tmp.xlsx`, `mech/tools/tests/bin/`, `mech/tools/tests/obj/`. `mech/out/` IS committed
   — it is what gets printed.
 - **Prove the copy** from the project root:
   1. `dotnet run mech/tools/smoke.cs` → `smoke ok`;
   2. `dotnet run mech/tools/build.cs` (creates `mech/.venv` and installs the
      pinned kernel on first run, a few minutes), then `check.cs`, `fit.cs`,
-     `render.cs`, `export.cs` on the example — every gate at 0;
+     `render.cs`, `sheet.cs`, `export.cs` on the example — every gate at 0 (`sheet.cs` and `export.cs` download the ClosedXML and Roslyn packages on their first run);
   3. `dotnet test mech/tools/tests` with `PAC_PYTHON` set to
      `mech/.venv/Scripts/python.exe` (Windows) so the pipeline tests run
      live rather than early-returning.

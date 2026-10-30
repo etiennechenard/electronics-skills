@@ -1,5 +1,7 @@
 using Mesh;
+using PartEdit;
 using PartModel;
+using Xunit;
 
 namespace Part3dAsCode.Tests;
 
@@ -22,6 +24,29 @@ public static class TestMeshes
             .. Quad(P(0, 0, 0), P(0, 0, 1), P(0, 1, 1), P(0, 1, 0)),   // left
             .. Quad(P(1, 0, 0), P(1, 1, 0), P(1, 1, 1), P(1, 0, 1)),   // right
         ];
+    }
+
+    /// The worked example's part.cs text: tests/example/part.cs in a
+    /// project (where the project's own part.cs has replaced the template),
+    /// else templates/part.cs in the plugin.
+    public static string ExamplePartText()
+    {
+        for (var d = new DirectoryInfo(AppContext.BaseDirectory); d is not null; d = d.Parent)
+            foreach (var rel in new[] { Path.Combine("example", "part.cs"), Path.Combine("templates", "part.cs") })
+                if (File.Exists(Path.Combine(d.FullName, rel)))
+                    return File.ReadAllText(Path.Combine(d.FullName, rel));
+        throw new FileNotFoundException($"no example part.cs above {AppContext.BaseDirectory}");
+    }
+
+    /// True when the compiled `Part.PartDesign.Model` is the worked example
+    /// (the plugin's layout); in a project it is the project's own model.
+    public static bool CompiledModelIsTheExample { get; } = ModelMatches(ExamplePartText());
+
+    static bool ModelMatches(string text)
+    {
+        var m = Part.PartDesign.Model;
+        return m.Params.Select(p => p.Name).Concat(m.Fits.Select(f => f.Name))
+            .All(n => Literals.Locate(text, n).Kind != LocateKind.Missing);
     }
 
     public static Stl MeshOf(IEnumerable<Tri> tris)
@@ -54,4 +79,14 @@ public static class TestMeshes
         Sweeps = [new("box", (0, 0, 10), ["board"], 0.1)],
         Measurements = ms ?? [],
     };
+}
+
+/// A Fact that needs the compiled model to be the worked example.
+public sealed class ExampleFactAttribute : FactAttribute
+{
+    public ExampleFactAttribute()
+    {
+        if (!TestMeshes.CompiledModelIsTheExample)
+            Skip = "the project's own part.cs replaced the worked example";
+    }
 }

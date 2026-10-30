@@ -83,6 +83,13 @@ public sealed record Envelope(double X, double Y, double Z);
 /// parameter it feeds, and where the callout marker goes on the render.
 public sealed record Measurement(string Id, string What, string Param, string Body, (double X, double Y, double Z) At);
 
+/// Where a parameter sits on a body, in assembly coordinates, for the
+/// labelled views (`<body>-dims-*.png`) and the parameter sheet: a span
+/// From..To is drawn as a dimension line and its length must equal the
+/// value; with no To, a point (a radius, a chamfer) is drawn as a marker.
+public sealed record Annotation(string Param, string Body, (double X, double Y, double Z) From,
+    (double X, double Y, double Z)? To = null);
+
 public sealed class Model
 {
     public required string Name { get; init; }
@@ -95,6 +102,7 @@ public sealed class Model
     public IReadOnlyList<FitCheck> Clearances { get; init; } = [];
     public IReadOnlyList<SweepCheck> Sweeps { get; init; } = [];
     public IReadOnlyList<Measurement> Measurements { get; init; } = [];
+    public IReadOnlyList<Annotation> Annotations { get; init; } = [];
     /// Files outside tools/ and parts/ the model or a script reads (board
     /// files, imported STEPs), relative to mech/: an output older than one
     /// is stale.
@@ -116,6 +124,16 @@ public sealed class Model
     public Body B(string name) =>
         Bodies.FirstOrDefault(b => b.Name == name) ?? throw new KeyNotFoundException($"no body '{name}'");
 
+    /// The label an annotated parameter carries in the views and on the
+    /// sheet: its 1-based position in Params. Null when it has no annotation.
+    public string? Label(string param)
+    {
+        if (!Annotations.Any(a => a.Param == param))
+            return null;
+        var i = Params.ToList().FindIndex(p => p.Name == param);
+        return i < 0 ? null : (i + 1).ToString(CultureInfo.InvariantCulture);
+    }
+
     /// The structural invariants: unique names, every reference resolves,
     /// sane values. build.cs refuses a model with any; the tests hold it empty.
     public IReadOnlyList<string> Validate()
@@ -131,6 +149,7 @@ public sealed class Model
         Dups("body", Bodies.Select(b => b.Name));
         Dups("expected dimension", Dims.Select(d => d.Probe));
         Dups("measurement", Measurements.Select(m => m.Id));
+        Dups("annotation of", Annotations.Select(a => a.Param));
 
         if (Envelope.X <= 0 || Envelope.Y <= 0 || Envelope.Z <= 0)
             bad.Add($"envelope {Envelope} is not positive");
@@ -201,6 +220,23 @@ public sealed class Model
                 bad.Add($"measurement {m.Id}: no parameter '{m.Param}'");
             if (!names.Contains(m.Body))
                 bad.Add($"measurement {m.Id}: no body '{m.Body}'");
+        }
+        foreach (var a in Annotations)
+        {
+            if (!names.Contains(a.Body))
+                bad.Add($"annotation of {a.Param}: no body '{a.Body}'");
+            if (Params.FirstOrDefault(p => p.Name == a.Param) is not { } p)
+            {
+                bad.Add($"annotation of {a.Param}: no parameter '{a.Param}'");
+                continue;
+            }
+            if (a.To is not { } to || p.Unit != "mm")
+                continue;
+            var (dx, dy, dz) = (to.X - a.From.X, to.Y - a.From.Y, to.Z - a.From.Z);
+            var len = Math.Sqrt(dx * dx + dy * dy + dz * dz);
+            if (Math.Abs(len - p.Value) > Math.Max(p.Tol, 0.01))
+                bad.Add(string.Create(CultureInfo.InvariantCulture,
+                    $"annotation of {a.Param}: the line is {len:0.###} mm long, the parameter is {p.Value:0.###} mm"));
         }
         if (Mode == Mode.Design && Measurements.Count > 0)
             bad.Add("measurements are a reproduce-mode sheet; this model is in design mode");

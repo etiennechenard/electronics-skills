@@ -17,6 +17,7 @@ public sealed record Layout(string Root)
     public string Build => Path.Combine(Root, "build");
     public string Renders => Path.Combine(Build, "renders");
     public string Out => Path.Combine(Root, "out");
+    public string Sheet => Path.Combine(Root, "params.xlsx");
     public string Params => Path.Combine(Build, "params.json");
     public string FitReport => Path.Combine(Build, "fit.json");
     public string Requirements => Path.Combine(Root, "requirements.txt");
@@ -50,7 +51,7 @@ public sealed record Layout(string Root)
     }
 
     /// The template libraries that read outputs but never shape them.
-    public static readonly string[] NotInputs = ["stl.cs", "raster.cs", "checks.cs"];
+    public static readonly string[] NotInputs = ["stl.cs", "raster.cs", "checks.cs", "partedit.cs", "paramsheet.cs"];
 
     /// Every file the outputs derive from: the C# library files in tools/
     /// (part.cs and what it includes; entry tools — the files with a `#:sdk`

@@ -41,6 +41,11 @@ Then:
   drawing or STEP first, then renders numbered callouts for the user to
   measure with calipers, and the DIM gate refuses any critical number that
   is still a guess.
+- **The parameter sheet.** `sheet.cs` writes `mech/params.xlsx` — every
+  number next to the renders. The user edits the highlighted cells in Excel
+  and asks the agent to apply them; `sheet.cs -- pull` writes the changes
+  back into `part.cs` (which stays the single source of truth) and the
+  pipeline reruns. In reproduce mode the sheet is also the measurement sheet.
 - **Coupons** — small slices of the critical features, cut from the real
   bodies — print in minutes, before the part, and tune the fits.
 - **`/3dpart-review`** sweeps cheap read-only reviewer agents over the docs,
@@ -69,10 +74,12 @@ Then:
     │   │     stl.cs         STL read/write + mesh checks, envelope, overhang
     │   │     raster.cs      dependency-free renderer → PNG
     │   │     checks.cs      the DIM / MESH / FIT / staleness gates
+    │   │     partedit.cs   find and rewrite numeric literals in part.cs
+    │   │     paramsheet.cs the params.xlsx writer / reader (ClosedXML)
     │   │     pac.py         the build123d helper (body, probes, coupons,
     │   │                    export; fit and assembly stages)
     │   │     parts/bracket.py   the example's geometry
-    │   │     build.cs check.cs fit.cs render.cs export.cs smoke.cs
+    │   │     build.cs check.cs fit.cs render.cs sheet.cs export.cs smoke.cs
     │   │     requirements.txt   build123d pinned
     │   └── tests/           xUnit suite: mesh, renderer + PNG, model, gates,
     │                        and the example through the whole pipeline with

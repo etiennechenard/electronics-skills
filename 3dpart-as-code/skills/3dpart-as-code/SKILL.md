@@ -28,11 +28,12 @@ This file is the map; read the reference named for the stage you are working (pa
 | 2. geometry | `parts/*.py` → STEP, STL (print pose), assembly STL, probes; `build.cs` | `BUILD PROBLEMS: 0` (valid solids, every body built) | `references/step2-geometry.md` |
 | 3. check | probes vs part.cs; printed meshes; envelope; overhang report; `check.cs` | `DIM PROBLEMS: 0`, `MESH PROBLEMS: 0` | `references/step3-check.md` |
 | 4. fit | clearances and insertion sweeps on the STEPs (mating boards and keep-outs as reference bodies); `fit.cs` | `FIT PROBLEMS: 0` | `references/step4-fit.md` |
-| 5. render + coupons | PNG views (print pose, assembly, callouts); coupon bodies printed first; `render.cs` | read the renders | `references/step5-render-coupons.md` |
+| 5. render + coupons | PNG views (print pose, assembly, numbered parameter dimensions, callouts); coupon bodies printed first; `render.cs` | read the renders | `references/step5-render-coupons.md` |
+| sheet | `mech/params.xlsx`: every number beside the renders; the user edits cells, `sheet.cs -- pull` writes them back into part.cs | `SHEET PROBLEMS: 0` / `PULL PROBLEMS: 0` | `references/step5-render-coupons.md` (the parameter sheet) |
 | 6. export | `out/`: STL + STEP per printed body, assembly.step, renders, manifest; `export.cs` | refuses stale or dirty | `references/step6-export.md` |
 | review | multi-wave fresh-eyes sweep of part.cs, scripts, renders, docs | fixes in the source, rebuilt, gates re-run | the `3dpart-review` skill (`${CLAUDE_PLUGIN_ROOT}/skills/3dpart-review/`) |
 
-Run order from the project root: `dotnet run mech/tools/build.cs`, `check.cs`, `fit.cs`, `render.cs`, `export.cs`. Run `3dpart-review` before printing anything big (hours of filament) and after any large change.
+Run order from the project root: `dotnet run mech/tools/build.cs`, `check.cs`, `fit.cs`, `render.cs`, `sheet.cs` (optional, for the user to tune numbers), `export.cs`. The user edits `mech/params.xlsx` and asks you to apply it: `dotnet run mech/tools/sheet.cs -- pull`, then rebuild (build, check, fit, render, sheet). Run `3dpart-review` before printing anything big (hours of filament) and after any large change.
 
 ## Toolchain (this machine)
 
@@ -56,7 +57,9 @@ Run order from the project root: `dotnet run mech/tools/build.cs`, `check.cs`, `
 | `checks.cs` | `Checks`: `Probes.Load`, `Gates.Dims/Sources/Outputs/Meshes/Fit/Stale/BuildOutputs`, `Gates.Report` |
 | `pac.py` | the build123d helper: `load`, `body`, `probe`, `probe_cyl`, `probe_extent`, `region`, `coupon`, `import_step`, `finish`; stages `fit` and `assembly` |
 | `parts/bracket.py` | the example's geometry |
-| `build.cs` `check.cs` `fit.cs` `render.cs` `export.cs` | the pipeline's entry tools |
+| `partedit.cs` | `PartEdit`: `Literals.Locate/SetValue/SetArgument` — find and rewrite one numeric literal in part.cs by its syntax tree (Roslyn) |
+| `paramsheet.cs` | `ParamSheet`: `Sheet.Write` (params.xlsx via ClosedXML), `Sheet.Read` (edits, problems, warnings), `Sheet.Apply` |
+| `build.cs` `check.cs` `fit.cs` `render.cs` `sheet.cs` `export.cs` | the pipeline's entry tools (`sheet.cs` generates the parameter sheet, or with `-- pull` applies it) |
 | `smoke.cs` | proves the include path: `dotnet run mech/tools/smoke.cs` |
 | `requirements.txt` | the pinned kernel |
 
@@ -69,6 +72,7 @@ The xUnit suite in `tests/` compiles the libraries directly and runs the example
 - An empty boolean result is an empty `Compound`, not `None`: test `.solids()`, never truthiness.
 - The STL is in **print pose** (`up` axis to +Z, centred, on z = 0) — the STEP and `build/asm/*.stl` stay in assembly coordinates. Measure fits on the STEPs, printability on the STLs.
 - Holes print small and bosses print fat on FDM: the named fits carry that, per side. Tune them once from a coupon and keep the tuned values in part.cs; never fudge one hole.
+- `mech/params.xlsx` is a generated, gitignored front-end; part.cs stays the truth. **Excel locks an open file**: close it before `sheet.cs` regenerates (it prints `params.xlsx is open (close it in Excel and re-run)`); `sheet.cs -- pull` reads only what was saved. xlsx, never CSV: a French-locale Excel saves CSV with `;` and decimal commas. `sheet.cs` and `export.cs` use the ClosedXML and Roslyn packages (`#:package`), so their first run downloads from NuGet; `dotnet run` needs no `PublishAot=false` (the spike built with no trim/AOT warnings). `export.cs` refuses a sheet holding edits that were never pulled.
 - File-based apps compile trimmed/AOT-checked: build JSON with `JsonNode` implicit conversions (`new JsonArray(x, y)`), not generic `Add<T>` on doubles — that throws at run time.
 - Console text from the tools stays ASCII (`+/-`, `x`, `>=`): Windows pipes default to the OEM code page and turn `±`/`×`/`≥` into `?`.
 - Two `dotnet run` of the same .cs at once fail on a locked exe — one instance per tool.

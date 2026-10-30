@@ -23,13 +23,20 @@ var m = PartDesign.Model;
 - Run from anywhere: `dotnet run mech/tools/check.cs` (`-- --mech <dir>`
   points at another mech/). Each entry file is its own app; libraries are
   included explicitly, never picked up implicitly.
+- **NuGet packages** come in with `#:package <id>@<version>`, pinned to one
+  exact version (the sheet tools use `ClosedXML@0.105.1` and
+  `Microsoft.CodeAnalysis.CSharp@5.9.0`, the same versions as the test
+  csproj). The first run downloads them.
 - **Library files declare types only** — no top-level statements — in
   their own namespace: `PartModel`, `Part`, `Mech`, `Mesh`, `Raster`,
-  `Checks`. Include what a library needs: `part.cs` needs `partmodel.cs`;
-  `checks.cs` needs `partmodel.cs`, `mech.cs` and `stl.cs`; `raster.cs`
-  needs `stl.cs`.
+  `Checks`, `PartEdit`, `ParamSheet`. Include what a library needs:
+  `part.cs` needs `partmodel.cs`; `checks.cs` needs `partmodel.cs`,
+  `mech.cs` and `stl.cs`; `raster.cs` needs `stl.cs`; `partedit.cs` needs
+  the Roslyn package; `paramsheet.cs` needs `partmodel.cs`, `mech.cs`,
+  `partedit.cs` and both packages.
 - **What counts as a build input**: every library `.cs` in `mech/tools/`
-  except the readers (`stl.cs`, `raster.cs`, `checks.cs` — `Layout.NotInputs`),
+  except the readers (`stl.cs`, `raster.cs`, `checks.cs`, `partedit.cs`,
+  `paramsheet.cs` — `Layout.NotInputs`),
   plus pac.py, the scripts, requirements.txt and `Model.Inputs`. Entry
   files (a `#:sdk` line) never are. A new library that shapes no geometry
   belongs in `NotInputs`, or every edit to it forces a rebuild.
