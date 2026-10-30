@@ -101,6 +101,14 @@ public static class PartDesign
             Clearances = [new("pin", "bracket", slip.Gap * 0.75, "radial slip gap")],
             Sweeps = [new("pin", (0, 0, 25), ["bracket"], slip.Gap * 0.75, Note: "dropped in from above")],
             Annotations = annotations,
+            // the bracket cut through the pin's axis: the pin in its hole; the
+            // pin lifted out; the hole with the pin hidden
+            Views =
+            [
+                new("cutaway", Cut: ("bracket", "+X", 0)),
+                new("exploded", Move: ("pin", (0, 0, 12))),
+                new("open", Hide: ["pin"]),
+            ],
         };
     }
 

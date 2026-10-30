@@ -3,7 +3,7 @@ using Xunit;
 
 namespace Visa.Tests.Protocol;
 
-// Attribute IDs from TDDCliContract.md §6
+// Attribute IDs from TechDesignCliContract.md §6
 file static class AsrlAttr
 {
     public const uint Baud       = 0x3FFF0021;

@@ -54,6 +54,47 @@ new Body("lid", "parts/case.py", Up: "-Z", Note: "printed upside down: the top f
 - **Kind**: `Part` (printed), `Coupon` (a printed test slice, step 5),
   `Reference` (a mating board, a bought part, a keep-out volume — fit-checked,
   never printed).
+- **Color** (`"#c0c0c8"`): the body's colour in the renders; unset, the
+  palette picks one. Give bought parts a recognisable colour (a switch
+  silver, a battery black).
+
+## Boards (pcb-as-code projects)
+
+```csharp
+Boards =
+[
+    new("ctl-pcb", "../pcb/controller.kicad_pcb", Origin: (150, 100), X: "+X", Y: "+Y", At: (0, 0, ctlZ),
+        Replaces: ["controller", "controller-parts"]),
+]
+```
+
+A board shown in place, with its parts' 3D models, in every assembly
+render and in `assembly.step` (`pcb-bridge.md`). Display only: fits stay on
+keep-out `Reference` bodies, which `Replaces` hides from the renders.
+- **Origin**: the KiCad page point (mm) that becomes the board's zero, its
+  design centre (pcb-as-code's page offset; read the constant, never retype it).
+- **X, Y**: the assembly axes the board's +x and its up (KiCad −y) point
+  along. Its F face looks along X × Y: a flat board with parts up is
+  `"+X", "+Y"`; a front panel seen from the front with F outside is
+  `"-X", "+Z"` (F along +Y).
+- **At**: where Origin lands, on the board's B face.
+- The `.kicad_pcb` is a build input: an edited board makes the build stale.
+
+## Assembly views
+
+```csharp
+Views =
+[
+    new("open", Hide: ["lid"]),
+    new("cutaway", Cut: ("lid", "+X", 0)),            // the lid's X >= 0 half, cut faces capped
+    new("exploded", Move: ("lid", (0, 0, 120))),
+]
+```
+
+Extra assembly renders for seeing inside a closed part (`assembly-<view>-
+iso.png`, `-isoback.png`): hide bodies or boards, cut one body at an axis
+plane, move one body. Declare them from the start for any enclosure: the
+reviewers read them too.
 
 ## Expected dimensions
 
@@ -90,6 +131,7 @@ tune; a parameter with none shows no `#`.
 - `Envelope = new(x, y, z)` — the user's printer.
 - `Inputs = ["../pcb/controller.kicad_pcb"]` — files outside tools/ and
   parts/ the model or a script reads; an output older than one is stale.
+  The boards' files are added without listing them.
 - `Tolerance` / `AngularTolerance` — STL chord error (default 0.01 mm) and
   angle (0.1 rad). Coarser for very large parts if the STL gets huge.
 

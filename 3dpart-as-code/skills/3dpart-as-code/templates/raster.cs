@@ -24,6 +24,14 @@ public readonly record struct Rgb(byte R, byte G, byte B)
     /// Distinct, print-friendly body colours, picked in order.
     public static readonly Rgb[] Palette =
         [new(86, 132, 196), new(222, 140, 60), new(96, 168, 110), new(176, 104, 168), new(196, 176, 72), new(110, 110, 120)];
+
+    /// A board's FR4 and its components, in the assembly renders.
+    public static readonly Rgb Board = new(20, 110, 60);
+    public static readonly Rgb Component = new(55, 55, 62);
+
+    /// "#rrggbb" (PartModel.Body.Color).
+    public static Rgb Parse(string hex) =>
+        new(Convert.ToByte(hex.Substring(1, 2), 16), Convert.ToByte(hex.Substring(3, 2), 16), Convert.ToByte(hex.Substring(5, 2), 16));
 }
 
 public sealed record Callout(string Label, V3 At);

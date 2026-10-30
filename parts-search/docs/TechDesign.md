@@ -1,4 +1,4 @@
-# Blueprint — Parts Search Tool
+# TechDesign — Parts Search Tool
 
 Current-state design of the parts-search plugin — a search-only electronic-parts CLI querying the official DigiKey, Mouser, and Newark (element14) APIs. Seeded from the `parts-search` production run (2026-10-24/25) and reconciled against the shipped source.
 
@@ -51,7 +51,7 @@ Typical queries: an exact MPN ("TPIC6B595DWR") priced at a build quantity; a Dig
 
 ## 2. Context
 
-The plugin lives in the owner's private marketplace repository; the sibling plugins share the plugin shape (`.claude-plugin/plugin.json`, `README.md`, `skills/<name>/SKILL.md`), with `docs/` common but not universal (`micro-cap` ships none), and the two plugins that ship .NET CLI source (`visa` and `vref-kb`) establish the invocation pattern: skill text + `dotnet run` against source shipped at `skills/<name>/scripts/<Project>`, .NET SDK on PATH as a stated prerequisite (`visa` states .NET 8; this plugin states .NET 10, the current LTS); `micro-cap` is the counter-example — a PowerShell wrapper around the installed `mc12_64.exe`, no shipped source. The originating design document is `../../Resources/Parts-Lookup-Tool-Plan.md` (relative to this repo's root — a sibling workspace folder; input context for this blueprint; its vendor research and decisions carry over — official APIs, C# CLI + skill over MCP server, env-var key overrides). The user descoped its BOM/CSV mode during drafting of this blueprint.
+The plugin lives in the owner's private marketplace repository; the sibling plugins share the plugin shape (`.claude-plugin/plugin.json`, `README.md`, `skills/<name>/SKILL.md`), with `docs/` common but not universal (`micro-cap` ships none), and the two plugins that ship .NET CLI source (`visa` and `vref-kb`) establish the invocation pattern: skill text + `dotnet run` against source shipped at `skills/<name>/scripts/<Project>`, .NET SDK on PATH as a stated prerequisite (`visa` states .NET 8; this plugin states .NET 10, the current LTS); `micro-cap` is the counter-example — a PowerShell wrapper around the installed `mc12_64.exe`, no shipped source. The originating design document is `../../Resources/Parts-Lookup-Tool-Plan.md` (relative to this repo's root — a sibling workspace folder; input context for this TechDesign; its vendor research and decisions carry over — official APIs, C# CLI + skill over MCP server, env-var key overrides). The user descoped its BOM/CSV mode during drafting of this TechDesign.
 
 ## 3. Goals
 
@@ -453,18 +453,7 @@ plugin-marketplace/
     ├── .claude-plugin/plugin.json                 (name "parts-search", version "0.1.0", one-line description)
     ├── README.md                                  (setup: `parts-search key set` walk-through ~1 min/vendor, env-var overrides, examples)
     ├── docs/
-    │   ├── Blueprint.md                           (main blueprint — created by large-assembly-line consolidation)
-    │   └── production-run/
-    │       └── parts-search-large/                (THIS run folder)
-    │           ├── Blueprint.md                   (this document)
-    │           ├── TaskList.md                    (written by large-assembly-line)
-    │           ├── SetupSheet.md
-    │           ├── WorkInstructions.md
-    │           ├── WorkInstructionsMistakes.md
-    │           ├── SupervisorCard.md              (gitignored)
-    │           ├── RunPaths.local.md              (gitignored)
-    │           ├── .gitignore
-    │           └── ProductionLog.md
+    │   └── TechDesign.md                           (main TechDesign — created by large-assembly-line consolidation)
     └── skills/parts-search/
         ├── SKILL.md                               (house style — modeled on visa/skills/visa/SKILL.md)
         └── scripts/

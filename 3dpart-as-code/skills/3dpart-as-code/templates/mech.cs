@@ -29,6 +29,15 @@ public sealed record Layout(string Root)
     public string AsmStl(string body) => Path.Combine(Build, "asm", body + ".stl");
     public string Assembly => Path.Combine(Build, "assembly.step");
 
+    /// kicad-cli's exports of a board: part "board" (the bare board) or "parts"
+    /// (its components' 3D models), in the board's own frame.
+    public string Boards => Path.Combine(Build, "boards");
+    public string BoardStep(string board, string part) => Path.Combine(Boards, $"{board}-{part}.step");
+    /// A board's placed meshes: asm/<board>.stl and asm/<board>-parts.stl.
+    public string BoardStl(string board, string part) => AsmStl(part == "board" ? board : $"{board}-parts");
+    /// A view's cut body: asm/views/<view>/<body>.stl.
+    public string ViewStl(string view, string body) => Path.Combine(Build, "asm", "views", view, body + ".stl");
+
     /// The probe file a script writes (pac.finish: probe-<script stem>.json).
     public string Probe(string script) => Path.Combine(Build, $"probe-{Path.GetFileNameWithoutExtension(script)}.json");
 
@@ -71,6 +80,90 @@ public sealed record Layout(string Root)
             .Concat(File.Exists(Requirements) ? [Requirements] : [])
             .Concat((extra ?? []).Select(e => Path.GetFullPath(Path.Combine(Root, e))));
     }
+}
+
+/// kicad-cli, for the boards a model shows (PartModel.Board).
+public static class KiCad
+{
+    /// KICAD_CLI wins (`env` stands in for it in the tests); then PATH; then
+    /// the newest install in the usual places. Null when none is found.
+    public static string? Find(string? env = null)
+    {
+        env ??= Environment.GetEnvironmentVariable("KICAD_CLI");
+        if (!string.IsNullOrEmpty(env))
+            return env;
+        var exe = OperatingSystem.IsWindows() ? "kicad-cli.exe" : "kicad-cli";
+        foreach (var dir in (Environment.GetEnvironmentVariable("PATH") ?? "").Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries))
+        {
+            var p = Path.Combine(dir, exe);
+            if (File.Exists(p))
+                return p;
+        }
+        if (OperatingSystem.IsWindows())
+        {
+            var root = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "KiCad");
+            if (Directory.Exists(root))
+                return Directory.EnumerateDirectories(root)
+                    .Select(d => (Dir: d, Version: Version.TryParse(Path.GetFileName(d), out var v) ? v : new Version(0, 0)))
+                    .OrderByDescending(d => d.Version)
+                    .Select(d => Path.Combine(d.Dir, "bin", exe))
+                    .FirstOrDefault(File.Exists);
+            return null;
+        }
+        return new[] { "/Applications/KiCad/KiCad.app/Contents/MacOS/kicad-cli", "/usr/bin/kicad-cli", "/usr/local/bin/kicad-cli" }
+            .FirstOrDefault(File.Exists);
+    }
+
+    /// The STEP export of one part of a board: "board" is the bare board with
+    /// its silkscreen and mask, "parts" its components' 3D models. Origin is
+    /// the KiCad page point (mm) that becomes the STEP's zero.
+    public static string[] ExportArgs(string pcb, string step, string part, (double X, double Y) origin)
+    {
+        var o = FormattableString.Invariant($"{origin.X}x{origin.Y}mm");
+        string[] what = part == "board"
+            ? ["--no-components", "--include-silkscreen", "--include-soldermask"]
+            : ["--no-board-body", "--subst-models"];
+        return ["pcb", "export", "step", "-f", "--user-origin", o, .. what, "-o", step, pcb];
+    }
+
+    /// Export both parts of a board into build/boards/. A board with no 3D
+    /// models gives no parts file (that is not a failure). Returns the
+    /// problems and the number of 3D model files kicad-cli could not find.
+    public static (List<string> Problems, int MissingModels) Export(string cli, Layout l, string name, string pcb,
+        (double X, double Y) origin)
+    {
+        var bad = new List<string>();
+        var missing = 0;
+        Directory.CreateDirectory(l.Boards);
+        var path = Path.GetFullPath(Path.Combine(l.Root, pcb));
+        if (!File.Exists(path))
+            return ([$"board {name}: {pcb} not found"], 0);
+        if (!ExecutableExists(cli))
+            return ([$"board {name}: kicad-cli not found: {cli}"], 0);
+        foreach (var part in new[] { "board", "parts" })
+        {
+            var step = l.BoardStep(name, part);
+            if (File.Exists(step))
+                File.Delete(step);
+            var r = Python.Run(cli, ExportArgs(path, step, part, origin));
+            var text = r.Stdout + r.Stderr;
+            missing += text.Split('\n').Count(line => line.Contains("File not found", StringComparison.OrdinalIgnoreCase));
+            if (part == "board" && (r.Rc != 0 || !File.Exists(step)))
+                bad.Add($"board {name}: kicad-cli failed (exit {r.Rc}): {text.Trim()}");
+        }
+        return (bad, missing);
+    }
+
+    /// Process.Start with UseShellExecute = false resolves a bare name on the
+    /// PATH (appending .exe on Windows); anything carrying a directory must
+    /// be a real file.
+    internal static bool ExecutableExists(string exe) =>
+        Path.IsPathRooted(exe) || exe.Contains(Path.DirectorySeparatorChar) || exe.Contains(Path.AltDirectorySeparatorChar)
+            ? File.Exists(exe)
+            : (Environment.GetEnvironmentVariable("PATH") ?? "")
+                .Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries)
+                .Select(d => Path.Combine(d, OperatingSystem.IsWindows() && !exe.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) ? exe + ".exe" : exe))
+                .Any(File.Exists);
 }
 
 public static class Python

@@ -22,6 +22,10 @@ then writes into the build directory:
                      on z = 0), printed bodies only: the file for the slicer
   probe-<script>.json  the probes, plus <body>.volume and <body>.bbox.x|y|z
 
+The assembly stage (build.cs, after the scripts) writes assembly.step, the
+placed meshes of the boards part.cs shows (from kicad-cli's STEPs in
+boards/) and the views' cut bodies (asm/views/<view>/<body>.stl).
+
 The fit stage runs this file directly:
   python pac.py fit --params build/params.json --out build
 reads every <body>.step the clearances and sweeps name and writes fit.json.
@@ -33,8 +37,9 @@ import math
 import pathlib
 import sys
 
-from build123d import (Axis, Box, Compound, GeomType, Pos, export_step,
+from build123d import (Axis, Box, Compound, GeomType, Location, Pos, export_step,
                        export_stl, import_step as _import_step)
+from OCP.gp import gp_Trsf
 
 _state = None
 
@@ -290,20 +295,82 @@ def fit(params_path, out):
     (out / "fit.json").write_text(json.dumps(res, indent=2), encoding="utf-8")
 
 
+_AXIS = {"+X": (1, 0, 0), "-X": (-1, 0, 0), "+Y": (0, 1, 0), "-Y": (0, -1, 0), "+Z": (0, 0, 1), "-Z": (0, 0, -1)}
+
+
+def _board_location(b):
+    """A board's placement: its x along b["x"], its up along b["y"], its
+    F face along x cross y, its origin (on the B face) at b["at"]."""
+    ax, ay = _AXIS[b["x"]], _AXIS[b["y"]]
+    n = (ax[1] * ay[2] - ax[2] * ay[1], ax[2] * ay[0] - ax[0] * ay[2], ax[0] * ay[1] - ax[1] * ay[0])
+    at = b["at"]
+    t = gp_Trsf()
+    t.SetValues(ax[0], ay[0], n[0], at[0],
+                ax[1], ay[1], n[1], at[1],
+                ax[2], ay[2], n[2], at[2])
+    return Location(t)
+
+
+def _half(shape, keep, at):
+    """The part of shape on the `keep` side ("+X": x >= at) of an axis
+    plane, its cut faces capped."""
+    bb = shape.bounding_box()
+    lo, hi = [bb.min.X - 1, bb.min.Y - 1, bb.min.Z - 1], [bb.max.X + 1, bb.max.Y + 1, bb.max.Z + 1]
+    i = "XYZ".index(keep[1])
+    if keep[0] == "+":
+        lo[i] = at
+    else:
+        hi[i] = at
+    if hi[i] <= lo[i]:
+        raise PacError(f"the cut at {keep[1]} = {at} leaves nothing of the body on the {keep} side")
+    box = Pos(*[(a + b) / 2 for a, b in zip(lo, hi)]) * Box(*[b - a for a, b in zip(lo, hi)])
+    return shape & box
+
+
 def assembly(params_path, out):
-    """Every body's STEP in one compound, in place: build/assembly.step."""
+    """Every body's STEP in one compound, in place, with the boards the
+    model shows: build/assembly.step. Then each board's placed meshes
+    (asm/<board>.stl, asm/<board>-parts.stl) and each view's cut body
+    (asm/views/<view>/<body>.stl) for the renders."""
     data = json.loads(pathlib.Path(params_path).read_text(encoding="utf-8"))
     out = pathlib.Path(out)
-    parts = []
+    tol, ang = data["tolerance"], data["angular_tolerance"]
+    parts, shapes = [], {}
     for b in data["bodies"]:
         f = out / f"{b['name']}.step"
         if not f.exists():
             raise PacError(f"{f} missing: a script did not finish")
         s = _import_step(str(f))
         s.label = b["name"]
+        shapes[b["name"]] = s
         parts.append(s)
+    for b in data.get("boards", []):
+        loc = _board_location(b)
+        for part in ("board", "parts"):
+            f = out / "boards" / f"{b['name']}-{part}.step"
+            if not f.exists():
+                if part == "board":
+                    raise PacError(f"{f} missing: build.cs exports it with kicad-cli")
+                continue  # no 3D models on this board
+            s = _import_step(str(f)).moved(loc)
+            name = b["name"] if part == "board" else f"{b['name']}-parts"
+            export_stl(s, str(out / "asm" / f"{name}.stl"), tolerance=max(tol, 0.05), angular_tolerance=max(ang, 0.3))
+            s.label = name
+            parts.append(s)
     export_step(Compound(children=parts, label=data["name"]), str(out / "assembly.step"))
-    print(f"assembly.step: {len(parts)} bodies")
+    print(f"assembly.step: {len(data['bodies'])} bodies"
+          + (f", {len(data.get('boards', []))} boards" if data.get("boards") else ""))
+    for v in data.get("views", []):
+        c = v.get("cut")
+        if not c:
+            continue
+        cut = _half(shapes[c["body"]], c["keep"], c["at"])
+        if not cut.solids():
+            raise PacError(f"view {v['name']}: the cut leaves nothing of {c['body']}")
+        d = out / "asm" / "views" / v["name"]
+        d.mkdir(parents=True, exist_ok=True)
+        export_stl(cut, str(d / f"{c['body']}.stl"), tolerance=tol, angular_tolerance=ang)
+        print(f"view {v['name']}: {c['body']} cut, {c['keep']} of {c['at']:g} kept")
 
 
 if __name__ == "__main__":

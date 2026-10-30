@@ -154,11 +154,15 @@ public static class Gates
     }
 
     /// What build.cs writes: every body's STEP and assembly STL, the printed
-    /// bodies' STLs, the probe files and assembly.step.
+    /// bodies' STLs, the probe files, assembly.step, each board's placed mesh
+    /// (its parts' mesh is optional: a board may have no 3D models) and each
+    /// view's cut body.
     public static IEnumerable<string> BuildOutputs(Model m, Layout l) =>
         m.Bodies.SelectMany(b => b.Printed ? new[] { l.Step(b.Name), l.AsmStl(b.Name), l.Stl(b.Name) } : [l.Step(b.Name), l.AsmStl(b.Name)])
             .Concat(m.Bodies.Select(b => l.Probe(b.Script)).Distinct())
-            .Append(l.Assembly);
+            .Append(l.Assembly)
+            .Concat(m.Boards.Select(b => l.AsmStl(b.Name)))
+            .Concat(m.Views.Where(v => v.Cut is not null).Select(v => l.ViewStl(v.Name, v.Cut!.Value.Body)));
 
     /// No output older than the newest input, and params.json is what part.cs
     /// writes now. `outputs` are the files about to be trusted.
@@ -167,7 +171,7 @@ public static class Gates
         var bad = new List<string>();
         if (!File.Exists(l.Params) || File.ReadAllText(l.Params) != m.ToJsonText())
             bad.Add("params.json differs from part.cs (run build.cs)");
-        var inputs = l.Inputs(m.Inputs).ToList();
+        var inputs = l.Inputs(m.AllInputs).ToList();
         foreach (var missing in inputs.Where(f => !File.Exists(f)))
             bad.Add($"input {Path.GetRelativePath(l.Root, missing)} missing");
         inputs = [.. inputs.Where(File.Exists)];

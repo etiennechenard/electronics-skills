@@ -38,6 +38,16 @@ public class MeshTests : IDisposable
     }
 
     [Fact]
+    public void Moved_shiftsEveryVertex()
+    {
+        var s = MeshOf([new Tri(new(0, 0, 0), new(1, 0, 0), new(0, 1, 0))]);
+        var m = s.Moved(new V3(5, 0, 10));
+        Assert.Equal(new V3(5, 0, 10), m.Tris[0].A);
+        Assert.Equal(new V3(6, 0, 10), m.Tris[0].B);
+        Assert.Equal(new V3(5, 1, 10), m.Tris[0].C);
+    }
+
+    [Fact]
     public void TwoBoxes_areTwoShells()
     {
         var r = MeshCheck.Analyze(MeshOf([.. Box(0, 0, 0, 5, 5, 5), .. Box(10, 0, 0, 5, 5, 5)]));

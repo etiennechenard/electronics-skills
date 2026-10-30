@@ -5,7 +5,7 @@ namespace Visa.Tests.Protocol;
 
 public class AttrRegistryTests
 {
-    // Nine known names from TDDCliContract §6 — assert exact id and type
+    // Nine known names from TechDesignCliContract §6 — assert exact id and type
     [Theory]
     [InlineData("VI_ATTR_TMO_VALUE",    0x3FFF001Au, AttrType.U32)]
     [InlineData("VI_ATTR_TERMCHAR",     0x3FFF0018u, AttrType.U8)]

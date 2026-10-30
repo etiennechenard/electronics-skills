@@ -47,6 +47,7 @@ public class FileBasedAppTests : IDisposable
         var (rc, o, e) = await Tool(mech, "build");
         Assert.True(rc == 0, $"build: {o}{e}");
         Assert.Contains("parts/bracket.py: 3 bodies", o);
+        Assert.Contains("view cutaway: bracket cut, +X of 0 kept", o);
         Assert.Contains("BUILD PROBLEMS: 0", o);
 
         (rc, o, e) = await Tool(mech, "check");
@@ -62,6 +63,16 @@ public class FileBasedAppTests : IDisposable
         (rc, o, e) = await Tool(mech, "render");
         Assert.True(rc == 0, $"render: {o}{e}");
         Assert.True(File.Exists(Path.Combine(mech, "build", "renders", "assembly-iso.png")));
+        foreach (var v in new[] { "iso", "isoback" })
+            Assert.True(File.Exists(Path.Combine(mech, "build", "renders", $"assembly-cutaway-{v}.png")), v);
+        // the hide and move views render too (the pin lifted out / hidden)
+        foreach (var v in new[] { "exploded", "open" })
+            foreach (var f in new[] { "iso", "isoback" })
+                Assert.True(File.Exists(Path.Combine(mech, "build", "renders", $"assembly-{v}-{f}.png")), $"{v}-{f}");
+        // the cut keeps the bracket's +X half: about half its volume
+        var half = new Layout(mech).ViewStl("cutaway", "bracket");
+        var whole = Mesh.Stl.Load(new Layout(mech).AsmStl("bracket")).Volume();
+        Assert.InRange(Mesh.Stl.Load(half).Volume() / whole, 0.4, 0.6);
 
         (rc, o, e) = await Tool(mech, "export");
         Assert.True(rc == 0, $"export: {o}{e}");
@@ -100,6 +111,56 @@ public class FileBasedAppTests : IDisposable
         (rc, o, _) = await Tool(mech, "export");
         Assert.Equal(1, rc);
         Assert.Contains("EXPORT REFUSED", o);
+    }
+
+    /// A 20 x 10 mm board centred on (100, 100) on the KiCad page, no parts.
+    private const string FixtureBoard = """
+        (kicad_pcb (version 20240108) (generator "pac-test")
+          (general (thickness 1.6))
+          (paper "A4")
+          (layers (0 "F.Cu" signal) (31 "B.Cu" signal) (44 "Edge.Cuts" user))
+          (setup (pad_to_mask_clearance 0))
+          (net 0 "")
+          (gr_rect (start 90 95) (end 110 105) (stroke (width 0.1) (type default)) (fill none) (layer "Edge.Cuts"))
+        )
+        """;
+
+    [Fact]
+    public async Task Board_isExportedPlacedAndRendered_andItsFileIsAnInput()
+    {
+        if (!DotnetOnPath() || Pac() is null || KiCad.Find() is null)
+            return;
+        var mech = Scaffold();
+        File.WriteAllText(Path.Combine(mech, "demo.kicad_pcb"), FixtureBoard);
+        var part = Path.Combine(mech, "tools", "part.cs");
+        // standing on edge behind the bracket: its +x along -X, its up along
+        // +Z, so its F face looks along +Y; its centre at (0, -20, 30)
+        File.WriteAllText(part, File.ReadAllText(part).Replace("Views =",
+            "Boards = [new(\"demo\", \"demo.kicad_pcb\", (100, 100), \"-X\", \"+Z\", (0, -20, 30))],\n            Views ="));
+
+        var (rc, o, e) = await Tool(mech, "build");
+        Assert.True(rc == 0, $"build: {o}{e}");
+        Assert.Contains("board demo: exported from demo.kicad_pcb", o);
+        Assert.Contains("1 boards", o);
+        var l = new Layout(mech);
+        Assert.False(File.Exists(l.BoardStl("demo", "parts")));   // no 3D models: no parts mesh
+        var mesh = Mesh.Stl.Load(l.BoardStl("demo", "board"));
+        var all = mesh.Tris.SelectMany(t => new[] { t.A, t.B, t.C }).ToList();
+        Assert.Equal(-10, all.Min(p => p.X), 1);
+        Assert.Equal(10, all.Max(p => p.X), 1);
+        Assert.Equal(-20, all.Min(p => p.Y), 1);
+        Assert.InRange(all.Max(p => p.Y), -18.6, -18.3);   // the board's thickness, as KiCad's stackup gives it
+        Assert.Equal(25, all.Min(p => p.Z), 1);
+        Assert.Equal(35, all.Max(p => p.Z), 1);
+
+        (rc, o, e) = await Tool(mech, "render");
+        Assert.True(rc == 0, $"render: {o}{e}");
+
+        // an edited board makes the build stale
+        File.SetLastWriteTimeUtc(Path.Combine(mech, "demo.kicad_pcb"), DateTime.UtcNow);
+        (rc, o, _) = await Tool(mech, "check");
+        Assert.Equal(1, rc);
+        Assert.Contains("is older than demo.kicad_pcb", o);
     }
 
     [Fact]

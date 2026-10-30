@@ -1,7 +1,8 @@
-// Build every body: write build/params.json from part.cs, run each geometry
-// script (parts/*.py) in the project's venv, then gather the bodies into
-// build/assembly.step. A build starts from an empty build/, so nothing a
-// removed script once wrote survives.
+// Build every body: write build/params.json from part.cs, export the boards
+// the model shows (kicad-cli), run each geometry script (parts/*.py) in the
+// project's venv, then gather the bodies and boards into build/assembly.step
+// and cut the views' bodies. A build starts from an empty build/, so nothing
+// a removed script once wrote survives.
 //
 //   dotnet run mech/tools/build.cs [-- --mech <dir>]
 
@@ -38,6 +39,19 @@ catch (Exception e) when (e is InvalidOperationException or FileNotFoundExceptio
 }
 
 var problems = new List<string>();
+if (m.Boards.Count > 0)
+{
+    if (KiCad.Find() is not { } cli)
+        problems.Add("kicad-cli not found (the model shows boards): install KiCad, or set KICAD_CLI to kicad-cli's path");
+    else
+        foreach (var b in m.Boards)
+        {
+            var (bad, missing) = KiCad.Export(cli, l, b.Name, b.Pcb, b.Origin);
+            problems.AddRange(bad);
+            Console.WriteLine($"board {b.Name}: exported from {b.Pcb}" +
+                (missing > 0 ? $" ({missing} 3D model file(s) not found: those parts are left out)" : ""));
+        }
+}
 foreach (var s in m.Bodies.Select(b => b.Script).Distinct())
 {
     if (!File.Exists(Path.Combine(l.Root, s)))
