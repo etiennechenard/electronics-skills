@@ -440,6 +440,28 @@ public sealed class SheetTests : IDisposable
     }
 
     [Fact]
+    public void Read_readingsLeftAfterAPull_andPartCsChangedSince_areAConflict()
+    {
+        var (m, text) = Reproduce();
+        var path = Write(m, text);
+        SetValue(path, "Measurements", "D1", 10.2, col: 9);
+        var pulled = Sheet.Apply(text, Sheet.Read(path, m, text).Edits).Text;
+        // the rebuilt model now holds w as measured at the median: clean
+        var rebuilt = TestMeshes.Model(Mode.Reproduce,
+            [.. m.Params.Select(q => q.Name == "w" ? q with { Value = 10.2, Source = Source.Measured, Ref = "D1" } : q)],
+            [.. m.Measurements]);
+        Assert.True(Sheet.Read(path, rebuilt, pulled).Clean);
+
+        var later = pulled.Replace("new(\"w\", 10.2,", "new(\"w\", 10.5,");
+        var read = Sheet.Read(path, m, later);
+        Assert.Empty(read.Edits);
+        var p = Assert.Single(read.Problems);
+        Assert.Contains("D1: conflict", p);
+        Assert.Contains("10.5", p);
+        Assert.Contains("delete params.xlsx and regenerate it", p);
+    }
+
+    [Fact]
     public void Read_twoMeasurementsOfOneParameterAreAProblem()
     {
         var (m, text) = Reproduce(new Measurement("D4", "width again", "w", "box", (3, 0, 0)));

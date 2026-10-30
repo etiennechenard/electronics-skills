@@ -62,7 +62,10 @@ readings per row in R1-R3 and saves. `sheet.cs -- pull` writes the median
 into the parameter with `Source: Measured` and `Ref: "<id>: <r1> / <r2> /
 <r3>"` (the filled readings only: for example `"D3: 6.18 / 6.21 / 6.2"`, or
 `"D3: 6.2"` for one reading). A spread wider than the parameter's tolerance
-is a warning, not a refusal. Without the sheet, ask for the median of the
+is a warning, not a refusal. The Current column is the value when the sheet
+was made: if part.cs has changed since to something other than the
+readings' median, the pull refuses it as a conflict (delete the sheet and
+regenerate it) rather than write the old median back. Without the sheet, ask for the median of the
 three readings and transcribe it yourself: `Source: Measured`, `Ref: "D3"`. Cosmetic dimensions may stay estimated from the photos or
 scan (`Chosen`, not critical).
 

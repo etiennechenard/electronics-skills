@@ -548,6 +548,14 @@ public static class Sheet
                 warnings.Add($"{id}: readings spread {Literals.Format(sorted[^1] - sorted[0])} mm, over the tolerance {Literals.Format(p.Tol)} of {p.Name}");
             if (Equal(e.Current, median) && p.Source == Source.Measured)
                 continue;
+            // Current is the row's Was: part.cs changed since the sheet was
+            // made, to something other than the median, is a conflict
+            if (TryNumber(row.Cell(4), out var was) && !Equal(e.Current, was) && !Equal(e.Current, median))
+            {
+                problems.Add($"{Measurements} {id}: conflict, the sheet was generated with {p.Name} at {Literals.Format(was)}, " +
+                    $"part.cs now holds {Literals.Format(e.Current)} and the readings give {Literals.Format(median)}; delete {file} and regenerate it");
+                continue;
+            }
             var rf = $"{id}: {string.Join(" / ", readings.Select(Literals.Format))}";
             edits.Add(new("Param", p.Name, e.Current, median, "Measured", rf));
         }

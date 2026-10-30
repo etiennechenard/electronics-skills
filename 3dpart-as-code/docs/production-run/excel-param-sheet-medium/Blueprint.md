@@ -27,7 +27,7 @@ All paths below are relative to the project root (`3dpart-as-code/`). Templates 
 
 - **Two new libraries and one tool.** `partedit.cs` (namespace `PartEdit`) finds and rewrites single numeric literals in `part.cs` text. `paramsheet.cs` (namespace `ParamSheet`) writes `params.xlsx` and reads back the user's edits. The entry tool `sheet.cs` generates the sheet, or with `-- pull` applies the edits to `part.cs`. Both libraries read outputs and never shape geometry, so they go into `Layout.NotInputs`.
 - **Editability is decided by the source text, not by the file.** A value is editable when its `Source` is `Chosen` or `Measured` *and* `part.cs` declares it as exactly one literal. A declaration is an object creation whose first argument is the string literal `"<name>"` and whose second argument is a numeric literal (optionally negated). Generation shows locked cells with the reason why; pull recomputes editability from the current `part.cs`, so a tampered or unprotected sheet can't bypass it.
-- **Three-way edit detection per value**, with no global hash. Each editable Parameters and Fits row carries a hidden `Was` (its value at generation time); Measurements rows have no `Was` and follow their own median rule (step 3):
+- **Three-way edit detection per value**, with no global hash. Each editable Parameters and Fits row carries a hidden `Was` (its value at generation time); Measurements rows use their `Current` column (the value at generation) as their `Was`, with the median in place of the sheet value (amended after the run, the deferred S1.F2, option a):
   - sheet = Was → no edit;
   - sheet ≠ Was and current `part.cs` = sheet → already applied;
   - sheet ≠ Was and current = Was → edit to apply;

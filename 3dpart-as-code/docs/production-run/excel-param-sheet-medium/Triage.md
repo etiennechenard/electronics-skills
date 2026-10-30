@@ -54,3 +54,5 @@ Smoke: dotnet test skills/3dpart-as-code/tests passes 106/106 with PAC_PYTHON=C:
 
 - Owner check "Excel look" done: the owner opened the generated sheet and approved it.
 - Added at the owner's request, without a blueprint: `Model.Annotations` (a parameter's line or point on a body, length-checked by `Validate`), `render.cs` numbered dimension views `<body>-dims-*.png` (hidden or end-on lines left out, labels scaled to stay legible), and on the Parameters sheet a leading `#` column with those views under the table.
+- Deferred S1.F2 settled by the owner: option (a). A Measurements row uses its Current column as Was; readings left after a pull, with part.cs changed since to another value, are a conflict. Test: `Read_readingsLeftAfterAPull_andPartCsChangedSince_areAConflict`.
+- Owner check "file open in Excel" done, with Excel itself holding `params.xlsx`: `sheet.cs` printed "params.xlsx is open (close it in Excel and re-run)" and exited 1; `sheet.cs -- pull` read the saved content (the owner's `bracket.w` 40 -> 42, saved with the file still open), rewrote part.cs and exited 0.
