@@ -1,0 +1,5 @@
+{
+  "name": "3dpart-as-code",
+  "version": "0.1.0",
+  "description": "Build 3D-printable parts design-as-code: every dimension, fit, body and check in a C# part.cs single source of truth, geometry in build123d scripts that hold no numbers, STL (print-oriented) and STEP regenerated as build outputs and gated — dimensions probed off the solid, watertight single-shell meshes inside the printer envelope, clearance and insertion-sweep fits against mating parts (pcb-as-code boards included) — with project tooling in C# .NET 10 file-based apps (dotnet run tool.cs). Design mode invents a part; reproduce mode copies an existing one from a caliper measurement sheet with numbered callout renders. Ships tested C# templates (part model, STL mesh checks, a dependency-free PNG renderer, the gates, the venv runner) and a build123d helper with an xUnit suite that runs a worked example end to end, plus a 3dpart-review skill: multi-wave sweeps of cheap read-only reviewer agents over the docs, part.cs, scripts and renders, triaged by the session, with fixes applied in the source and the parts rebuilt."
+}

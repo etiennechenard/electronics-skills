@@ -2,3 +2,6 @@
 bin/
 obj/
 *.user
+
+# Python bytecode (3dpart-as-code templates)
+__pycache__/

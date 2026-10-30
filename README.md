@@ -8,10 +8,11 @@ Agent skills for electronics — design, simulate, source parts, and drive lab i
 |---|---|
 | [`micro-cap`](micro-cap/README.md) | Drive Micro-Cap 12 headlessly on Windows: write SPICE netlists, run AC/transient/DC/distortion analyses and digital/mixed-signal logic in batch mode, and parse the numeric output files. |
 | [`parts-search`](parts-search/README.md) | Research parts against the official DigiKey, Mouser, and Newark (element14) APIs — normalized stock, unit price at quantity, price breaks, lifecycle status, substitute candidates, datasheets — plus one-time vendor API-key setup in the Windows Credential Manager. |
+| [`3dpart-as-code`](3dpart-as-code/README.md) | Build 3D-printable parts design-as-code: every dimension, fit and check in a C# single source of truth, geometry in build123d scripts, print-oriented STL and STEP regenerated and gated (probed dimensions, watertight meshes inside the printer, clearance and insertion-sweep fits, pcb-as-code boards as mating parts) — design mode or reproduce mode from a caliper measurement sheet, with a `3dpart-review` sweep of read-only reviewer agents. |
 | [`pcb-as-code`](pcb-as-code/README.md) | Build hardware design-as-code: KiCad 10+ schematics and PCBs generated from a C# single source of truth, verified pin-by-pin, autorouted headlessly with FreeRouting, gated by ERC/DRC, exported to fab gerbers/BOM/renders — with an `hw-review` skill that sweeps read-only reviewer agents over changed docs, design source, schematics and boards. |
 | [`visa`](visa/README.md) | Control VISA-addressable lab instruments (DMMs, scopes, power supplies, signal generators) over GPIB, USB-TMC, Serial/ASRL, and TCPIP/LXI: SCPI query/write/read, multi-command scripts, GPIB bus control, attribute access, USB-TMC control transfers, binary block transfers. |
 
-All four run on either harness — there is one edition of each plugin, not per-harness forks. Their runtime prerequisites (the .NET SDKs, the VISA driver, Micro-Cap 12 itself, vendor API keys) live in each plugin's own README.
+All five run on either harness — there is one edition of each plugin, not per-harness forks. Their runtime prerequisites (the .NET SDKs, Python 3.12 for build123d, the VISA driver, Micro-Cap 12 itself, vendor API keys) live in each plugin's own README.
 
 ## Add the marketplace to Claude Code
 
@@ -39,6 +40,7 @@ claude plugin install visa@electronics-skills
 claude plugin install micro-cap@electronics-skills
 claude plugin install parts-search@electronics-skills
 claude plugin install pcb-as-code@electronics-skills
+claude plugin install 3dpart-as-code@electronics-skills
 ```
 
 Or from inside Claude Code: run `/plugin` and enable them under the `electronics-skills` entry.
@@ -58,7 +60,7 @@ zcode plugins marketplace add https://github.com/etiennechenard/electronics-skil
 zcode plugins install visa@electronics-skills
 ```
 
-Or point the **`+`** button on **Settings → Plugin Management → Discover** at the repository URL, or at a local checkout of it. The listing shows all four plugins — install whichever you need. Installed plugins live under `%USERPROFILE%\.zcode\cli\plugins\cache\electronics-skills\<plugin>\<version>\`.
+Or point the **`+`** button on **Settings → Plugin Management → Discover** at the repository URL, or at a local checkout of it. The listing shows all five plugins — install whichever you need. Installed plugins live under `%USERPROFILE%\.zcode\cli\plugins\cache\electronics-skills\<plugin>\<version>\`.
 
 ## Update (ZCode)
 
@@ -66,7 +68,7 @@ Refresh or update the marketplace and its installed plugins from **Settings → 
 
 ## Next steps
 
-Runtime prerequisites and full usage live in each plugin's own README: **[micro-cap](micro-cap/README.md)**, **[parts-search](parts-search/README.md)**, **[pcb-as-code](pcb-as-code/README.md)**, and **[visa](visa/README.md)**.
+Runtime prerequisites and full usage live in each plugin's own README: **[micro-cap](micro-cap/README.md)**, **[3dpart-as-code](3dpart-as-code/README.md)**, **[parts-search](parts-search/README.md)**, **[pcb-as-code](pcb-as-code/README.md)**, and **[visa](visa/README.md)**.
 
 ## Adding a plugin (maintainers)
 
