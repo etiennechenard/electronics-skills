@@ -51,7 +51,7 @@ internal static class VisaNative
     [DllImport(LibraryAlias, ExactSpelling = true, CallingConvention = CallingConvention.StdCall)]
     internal static extern int viClose(uint vi);
 
-    // Third parameter stays uint — deliberately not widened to 64-bit (see TDDCliContract §6 note)
+    // Third parameter stays uint — deliberately not widened to 64-bit (see TechDesignCliContract §6 note)
     [DllImport(LibraryAlias, ExactSpelling = true, CallingConvention = CallingConvention.StdCall)]
     internal static extern int viSetAttribute(uint vi, uint attrName, uint attrValue);
 

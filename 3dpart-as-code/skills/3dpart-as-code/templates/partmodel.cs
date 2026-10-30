@@ -50,10 +50,50 @@ public static class Fits
 /// A body the geometry scripts produce. Up is the part axis that points up
 /// on the printer (+Z, -Z, +X, -X, +Y, -Y): the STL is written in that
 /// orientation, sitting on z = 0; the STEP stays in assembly coordinates.
-public sealed record Body(string Name, string Script, string Up = "+Z", BodyKind Kind = BodyKind.Part, string Note = "")
+/// Color ("#rrggbb") is the body's colour in the renders; unset, the
+/// palette picks one.
+public sealed record Body(string Name, string Script, string Up = "+Z", BodyKind Kind = BodyKind.Part, string Note = "",
+    string? Color = null)
 {
     public bool Printed => Kind != BodyKind.Reference;
 }
+
+/// A KiCad board shown in place, with its parts' 3D models, in the assembly
+/// renders and assembly.step. Display only: it is never fit-checked (KiCad's
+/// component models are not reliable solids), so fits stay on keep-out
+/// Reference bodies, which Replaces hides from the renders. build.cs exports
+/// it with kicad-cli: the bare board (silkscreen and mask on) and its parts.
+/// Origin is the KiCad page point (mm, y down) that becomes the board's zero;
+/// X and Y are the assembly axes (+X, -Z, ...) its +x and its up (KiCad -y)
+/// point along, so its F face looks along X x Y; At is where the origin
+/// lands, on the B face. The .kicad_pcb (mech-relative) is a build input.
+public sealed record Board(string Name, string Pcb, (double X, double Y) Origin, string X, string Y,
+    (double X, double Y, double Z) At, string[]? Replaces = null, string Note = "")
+{
+    /// An axis name as a unit vector: "+X" -> (1, 0, 0).
+    public static (int X, int Y, int Z) Axis(string a)
+    {
+        var s = a[0] == '-' ? -1 : 1;
+        return a[1] switch { 'X' => (s, 0, 0), 'Y' => (0, s, 0), _ => (0, 0, s) };
+    }
+
+    /// The direction the F face looks along: X x Y.
+    public (int X, int Y, int Z) Normal
+    {
+        get
+        {
+            var (a, b) = (Axis(X), Axis(Y));
+            return (a.Y * b.Z - a.Z * b.Y, a.Z * b.X - a.X * b.Z, a.X * b.Y - a.Y * b.X);
+        }
+    }
+}
+
+/// An extra assembly render for seeing inside: Hide leaves bodies (or
+/// boards) out, Cut keeps the part of a body on one side of an axis plane
+/// (Keep "+X" at 0: X >= 0, its cut faces capped), Move shifts a body (an
+/// exploded lid). Rendered iso and iso-back as assembly-<name>-*.png.
+public sealed record AssemblyView(string Name, string[]? Hide = null, (string Body, string Keep, double At)? Cut = null,
+    (string Body, (double X, double Y, double Z) By)? Move = null, string Note = "");
 
 /// A dimension measured off the built solid (probe.json) and the value it
 /// must have. Probe names are the script's (`<body>.<feature>`), plus the
@@ -105,8 +145,13 @@ public sealed class Model
     public IReadOnlyList<Annotation> Annotations { get; init; } = [];
     /// Files outside tools/ and parts/ the model or a script reads (board
     /// files, imported STEPs), relative to mech/: an output older than one
-    /// is stale.
+    /// is stale. The boards' .kicad_pcb files are added (AllInputs).
     public IReadOnlyList<string> Inputs { get; init; } = [];
+    public IReadOnlyList<Board> Boards { get; init; } = [];
+    public IReadOnlyList<AssemblyView> Views { get; init; } = [];
+
+    /// Inputs plus every board file.
+    public IEnumerable<string> AllInputs => Inputs.Concat(Boards.Select(b => b.Pcb)).Distinct();
     /// STL tessellation: chord deviation (mm) and angle (rad).
     public double Tolerance { get; init; } = 0.01;
     public double AngularTolerance { get; init; } = 0.1;
@@ -176,12 +221,64 @@ public sealed class Model
                 bad.Add($"body '{b.Name}': up '{b.Up}' is not one of {string.Join(" ", Ups)}");
             if (string.IsNullOrWhiteSpace(b.Script))
                 bad.Add($"body '{b.Name}': no script");
-            if (b.Name.Any(c => !(char.IsLetterOrDigit(c) || c is '-' or '_')))
+            if (!IsFileName(b.Name))
                 bad.Add($"body '{b.Name}': names are letters, digits, - and _ (they become file names)");
             if (b.Name == "assembly")
                 bad.Add($"body '{b.Name}': reserved (the assembly renders and build/assembly.step)");
+            if (b.Color is { } c && !IsColor(c))
+                bad.Add($"body '{b.Name}': color '{c}' is not #rrggbb");
         }
         var names = Bodies.Select(b => b.Name).ToHashSet();
+        Dups("board", Boards.Select(b => b.Name));
+        foreach (var b in Boards)
+        {
+            if (!IsFileName(b.Name))
+                bad.Add($"board '{b.Name}': names are letters, digits, - and _ (they become file names)");
+            foreach (var n in new[] { b.Name, b.Name + "-parts" }.Where(names.Contains))
+                bad.Add($"board '{b.Name}': its mesh {n}.stl clashes with body '{n}'");
+            foreach (var other in Boards.Where(o => !ReferenceEquals(o, b) && o.Name == b.Name + "-parts"))
+                bad.Add($"board '{b.Name}': its mesh {b.Name}-parts.stl clashes with board '{other.Name}'");
+            if (!b.Pcb.EndsWith(".kicad_pcb", StringComparison.OrdinalIgnoreCase))
+                bad.Add($"board '{b.Name}': {b.Pcb} is not a .kicad_pcb");
+            if (!Ups.Contains(b.X) || !Ups.Contains(b.Y))
+                bad.Add($"board '{b.Name}': X '{b.X}' and Y '{b.Y}' must each be one of {string.Join(" ", Ups)}");
+            else if (b.X[1] == b.Y[1])
+                bad.Add($"board '{b.Name}': X '{b.X}' and Y '{b.Y}' are not perpendicular");
+            foreach (var r in b.Replaces ?? [])
+                if (Bodies.FirstOrDefault(x => x.Name == r) is not { } rb)
+                    bad.Add($"board '{b.Name}': replaces no body '{r}'");
+                else if (rb.Kind != BodyKind.Reference)
+                    bad.Add($"board '{b.Name}': replaces '{r}', which is printed (only reference bodies)");
+        }
+        var boards = Boards.Select(b => b.Name).ToHashSet();
+        Dups("view", Views.Select(v => v.Name));
+        foreach (var v in Views)
+        {
+            if (!IsFileName(v.Name))
+                bad.Add($"view '{v.Name}': names are letters, digits, - and _ (they become file names)");
+            if ((v.Hide ?? []).Length == 0 && v.Cut is null && v.Move is null)
+                bad.Add($"view '{v.Name}': hides, cuts and moves nothing (the assembly renders already show that)");
+            foreach (var h in (v.Hide ?? []).Where(h => !names.Contains(h) && !boards.Contains(h)))
+                bad.Add($"view '{v.Name}': hides no body or board '{h}'");
+            if (v.Cut is { } cut)
+            {
+                if (!names.Contains(cut.Body))
+                    bad.Add($"view '{v.Name}': cuts no body '{cut.Body}'");
+                if (!Ups.Contains(cut.Keep))
+                    bad.Add($"view '{v.Name}': keep '{cut.Keep}' is not one of {string.Join(" ", Ups)}");
+                if ((v.Hide ?? []).Contains(cut.Body))
+                    bad.Add($"view '{v.Name}': cuts '{cut.Body}', which it also hides");
+            }
+            if (v.Move is { } mv)
+            {
+                if (!names.Contains(mv.Body))
+                    bad.Add($"view '{v.Name}': moves no body '{mv.Body}'");
+                if (mv.By == (0, 0, 0))
+                    bad.Add($"view '{v.Name}': moves '{mv.Body}' by nothing");
+                if ((v.Hide ?? []).Contains(mv.Body))
+                    bad.Add($"view '{v.Name}': moves '{mv.Body}', which it also hides");
+            }
+        }
         foreach (var d in Dims)
         {
             if (d.Tol < 0)
@@ -281,8 +378,22 @@ public sealed class Model
                 ["against"] = new JsonArray([.. s.Against.Select(a => (JsonNode)a)]),
                 ["min_gap"] = s.MinGap, ["steps"] = s.Steps,
             })]),
+            ["boards"] = new JsonArray([.. Boards.Select(b => (JsonNode)new JsonObject
+            {
+                ["name"] = b.Name, ["pcb"] = b.Pcb, ["origin"] = new JsonArray(b.Origin.X, b.Origin.Y),
+                ["x"] = b.X, ["y"] = b.Y, ["at"] = V(b.At),
+            })]),
+            ["views"] = new JsonArray([.. Views.Select(v => (JsonNode)new JsonObject
+            {
+                ["name"] = v.Name,
+                ["cut"] = v.Cut is { } c ? new JsonObject { ["body"] = c.Body, ["keep"] = c.Keep, ["at"] = c.At } : null,
+            })]),
         };
     }
+
+    static bool IsFileName(string n) => n.Length > 0 && n.All(c => char.IsLetterOrDigit(c) || c is '-' or '_');
+
+    static bool IsColor(string c) => c.Length == 7 && c[0] == '#' && c.Skip(1).All(char.IsAsciiHexDigit);
 
     public string ToJsonText() => ToJson().ToJsonString(new JsonSerializerOptions { WriteIndented = true });
 

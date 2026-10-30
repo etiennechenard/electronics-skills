@@ -7,7 +7,8 @@
 | File | Shows |
 |---|---|
 | `<body>-iso/front/top/right.png` | each printed body in print pose — what the slicer will see, bed at the bottom |
-| `assembly-iso/isoback/front/top.png` | every non-coupon body in place, references included |
+| `assembly-iso/isoback/front/top.png` | every non-coupon body in place, references included; each `Board` drawn with its parts (FR4 green, parts dark grey) in place of the keep-outs it replaces |
+| `assembly-<view>-iso/isoback.png` | each `AssemblyView` (step 1), 1600 × 1200: bodies hidden, one cut at a plane (its cut faces capped), one moved — the inside of a closed part |
 | `<body>-dims-*.png` | each annotated body with its parameters as numbered dimension lines (the number is the parameter sheet's `#`); a line hidden behind the part or seen end-on is left out of that view |
 | `<body>-callouts-*.png` | reproduce mode: the body with its numbered measurement markers |
 
@@ -18,7 +19,10 @@ from front-right-top, IsoBack from back-left-top. Each carries a scale bar
 **Read them** (the Read tool shows images) after every geometry change:
 a feature on the wrong face, a missing hole, a part floating off the bed in
 print pose, a body intersecting its reference — the renders show what no
-probe was written for. The review sweep reads them too.
+probe was written for. The review sweep reads them too. For a part that
+closes over something (an enclosure, a lid), the assembly views are the
+only renders that show the inside: a board on its standoffs, a panel in its
+groove, a connector against its cutout.
 
 For a closer look, open `build/<body>.step` or `build/assembly.step` in
 Fusion 360 (or any CAD viewer). Look only — changes there are lost.
@@ -34,7 +38,7 @@ the renders instead of describing them in prose.
 | Parameters | `#` (the number on the labelled views), then every parameter: value, unit, tolerance, critical, source, ref, note, and why a cell is locked; under the table, the `<body>-dims-*` views (the plain views when the model has no annotations) |
 | Fits | the named fits' gaps |
 | Measurements | reproduce mode only: the measurement table with readings R1-R3, the callout renders below it |
-| Views | the renders: each printed body's print pose, then the assembly |
+| Views | the renders: each printed body's print pose, then the assembly and each of its views |
 | Status | model, mode, generation time, the DIM / MESH / FIT problems, how to use the sheet |
 
 A **highlighted** cell is editable: the Value of a `Chosen` or `Measured`

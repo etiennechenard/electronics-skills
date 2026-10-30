@@ -38,6 +38,14 @@ public sealed class Stl
 {
     public List<Tri> Tris { get; } = [];
 
+    /// A copy shifted by `by` (an exploded view's lifted lid).
+    public Stl Moved(V3 by)
+    {
+        var s = new Stl();
+        s.Tris.AddRange(Tris.Select(t => new Tri(t.A + by, t.B + by, t.C + by)));
+        return s;
+    }
+
     public static Stl Load(string path)
     {
         var bytes = File.ReadAllBytes(path);

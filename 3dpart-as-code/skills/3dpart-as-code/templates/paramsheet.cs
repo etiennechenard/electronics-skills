@@ -260,7 +260,7 @@ public static class Sheet
         return placed;
     }
 
-    /// Each printed body's print pose, then the assembly, as a grid of
+    /// Each printed body's print pose, then the assembly and its views, as a grid of
     /// `perRow` columns starting at column `col`.
     static int PlaceViews(IXLWorksheet ws, Model m, Layout l, ref int row, int col, int perRow, int width = ImageWidth,
         bool packed = false)
@@ -271,6 +271,9 @@ public static class Sheet
                 Renders(l, [.. new[] { "iso", "front", "top", "right" }.Select(v => $"{b.Name}-{v}.png")]), perRow, col, width, packed);
         placed += Place(ws, ref row, "assembly",
             Renders(l, [.. new[] { "iso", "isoback", "front", "top" }.Select(v => $"assembly-{v}.png")]), perRow, col, width, packed);
+        foreach (var v in m.Views)
+            placed += Place(ws, ref row, $"assembly, {v.Name}",
+                Renders(l, [$"assembly-{v.Name}-iso.png", $"assembly-{v.Name}-isoback.png"]), perRow, col, width, packed);
         return placed;
     }
 

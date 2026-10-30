@@ -44,6 +44,29 @@ var holes = board.Footprints.SelectMany(f => f.Pads)
   file (`gen_*.cs`) cannot be included: move it to a library file in the
   pcb project first.
 
+## The board in the renders (Board)
+
+Declare each board in `Model.Boards` (`step1-part.md`): `build.cs` exports it
+with kicad-cli on every build (the bare board with its silkscreen and mask,
+then its parts' 3D models, into `build/boards/`), pac.py places it, and every
+assembly render and `AssemblyView` show the real board with its parts in
+place of the keep-out boxes it `Replaces` (assembly.step itself keeps every
+body — the keep-outs included — beside the boards).
+
+- kicad-cli: `KICAD_CLI`, then PATH, then the newest KiCad install; a model
+  with boards and no kicad-cli is a BUILD problem. A model with no boards
+  never needs it.
+- **Origin** is the page point of the board's design centre: for a
+  pcb-as-code board, the generators' page offset. Keep that constant in a
+  library file the case includes (beside the case's interface constants)
+  and use it, never the literal.
+- Footprints without a 3D model export nothing (build.cs counts the model
+  files kicad-cli could not find); a board with none leaves no parts mesh.
+- kicad-cli writes a `.kicad_prl` beside the board: keep `*.kicad_prl`
+  gitignored in the pcb project.
+- The board models are never fit-checked: component models are rarely
+  clean solids. Fit against the keep-outs below.
+
 ## The board as a reference body (fit)
 
 ```

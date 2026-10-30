@@ -1,12 +1,12 @@
-# TDDBinaryTransfer — visa-skill binary block transfer
+# TechDesignBinaryTransfer — visa-skill binary block transfer
 
 **Owner:** kosmic@gmail.com
 **Last updated:** 2026-06-13
-**Parent TDD:** [TDD.md](TDD.md)
+**Parent TechDesign:** [TechDesign.md](TechDesign.md)
 
 ---
 
-This sub-TDD specifies **G-S6** — binary block transfer. It covers the IEEE 488.2 arbitrary-block framing, the binary read/write VISA paths, the `--raw` escape, and the `read-block` / `write-block` algorithms. The wire-level JSON shapes for the two subcommands live in [TDDCliContract.md](TDDCliContract.md) §3; this document is the authoritative source for the **framing and I/O logic** behind them.
+This sub-TechDesign specifies **G-S6** — binary block transfer. It covers the IEEE 488.2 arbitrary-block framing, the binary read/write VISA paths, the `--raw` escape, and the `read-block` / `write-block` algorithms. The wire-level JSON shapes for the two subcommands live in [TechDesignCliContract.md](TechDesignCliContract.md) §3; this document is the authoritative source for the **framing and I/O logic** behind them.
 
 ## 1. Why binary transfer is different from text I/O
 
@@ -86,7 +86,7 @@ The 488.2 parse is applied by the **command handler** to the bytes `ReadRaw` ret
 6. Else: `BlockHeader.Parse(R)`:
    - On success: write the payload slice (`R[payloadOffset ..]`, length = `declaredLength` for definite, or the indefinite-length-trimmed slice) to `--out-file`; `format = "definite"` or `"indefinite"`, `declared_length = declaredLength` (null for indefinite), `bytes_written` = payload byte count.
    - On parse failure: emit a **usage** error (`error: "usage"`, operation `"parse_block"`, exit 2) whose `description` names the failure and suggests `--raw`; nothing is written to the file.
-7. Success envelope per [TDDCliContract.md](TDDCliContract.md) §3 (`read-block`).
+7. Success envelope per [TechDesignCliContract.md](TechDesignCliContract.md) §3 (`read-block`).
 
 File write: open `--out-file` for create/truncate, write the payload bytes, flush, close. Relative paths resolve against cwd.
 
@@ -103,7 +103,7 @@ File write: open `--out-file` for create/truncate, write the payload bytes, flus
    - If `--raw`: append `P` verbatim (no 488.2 header and **no trailing `\n`** — the file bytes end the message; EOI is asserted on the final byte by the normal write path).
    - Else: append `BlockHeader.Format(P.Length)` then `P`, then a trailing `\n` with EOI so the instrument sees end-of-message — same EOI behavior as a normal write.
 4. Open the session; apply serial options; set timeout; `WriteRaw(W)`.
-5. Success envelope per [TDDCliContract.md](TDDCliContract.md) §3 (`write-block`) — reports `in_file`, `payload_bytes` (`P.Length`), `bytes_written` (`W` wire count), and `format` (`"definite"` or `"raw"`).
+5. Success envelope per [TechDesignCliContract.md](TechDesignCliContract.md) §3 (`write-block`) — reports `in_file`, `payload_bytes` (`P.Length`), `bytes_written` (`W` wire count), and `format` (`"definite"` or `"raw"`).
 
 ## 6. Edge cases and rules
 

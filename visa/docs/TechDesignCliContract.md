@@ -1,12 +1,12 @@
-# TDDCliContract — visa-skill CLI
+# TechDesignCliContract — visa-skill CLI
 
 **Owner:** kosmic@gmail.com
 **Last updated:** 2026-06-13
-**Parent TDD:** [TDD.md](TDD.md)
+**Parent TechDesign:** [TechDesign.md](TechDesign.md)
 
 ---
 
-This sub-TDD is the **authoritative wire contract** between Claude and the `visa-skill` CLI. It is what `skills/visa/SKILL.md` summarizes for Claude's runtime context. If the parent TDD and this document disagree on contract-level detail, **this document wins** for the CLI surface; the parent TDD wins for architecture. The binary-block framing logic behind `read-block`/`write-block` is specified in [TDDBinaryTransfer.md](TDDBinaryTransfer.md); this document specifies their wire shapes.
+This sub-TechDesign is the **authoritative wire contract** between Claude and the `visa-skill` CLI. It is what `skills/visa/SKILL.md` summarizes for Claude's runtime context. If the parent TechDesign and this document disagree on contract-level detail, **this document wins** for the CLI surface; the parent TechDesign wins for architecture. The binary-block framing logic behind `read-block`/`write-block` is specified in [TechDesignBinaryTransfer.md](TechDesignBinaryTransfer.md); this document specifies their wire shapes.
 
 ## 1. Invocation form
 
@@ -18,7 +18,7 @@ The `--` separator is required so MSBuild stops parsing flags and forwards the r
 
 `Visa.csproj` is `Microsoft.NET.Sdk` console (`<OutputType>Exe</OutputType>`, `<TargetFramework>net8.0</TargetFramework>`, `<Nullable>enable</Nullable>`). No precompiled binary is checked in.
 
-**Text encoding and line endings (text I/O subcommands).** Command strings and text responses are treated as **ASCII**: C# `string` ↔ bytes via `Encoding.ASCII`. Bytes ≥ 0x80 returned by an instrument become the ASCII replacement char (non-ASCII is not legal SCPI). When a command does not already end with one, a single `\n` (0x0A) is appended — not `\r\n`. Read termination is configured via `--term-char` (default `\n`). **Binary subcommands (`read-block`/`write-block`) bypass this entirely** — see [TDDBinaryTransfer.md](TDDBinaryTransfer.md).
+**Text encoding and line endings (text I/O subcommands).** Command strings and text responses are treated as **ASCII**: C# `string` ↔ bytes via `Encoding.ASCII`. Bytes ≥ 0x80 returned by an instrument become the ASCII replacement char (non-ASCII is not legal SCPI). When a command does not already end with one, a single `\n` (0x0A) is appended — not `\r\n`. Read termination is configured via `--term-char` (default `\n`). **Binary subcommands (`read-block`/`write-block`) bypass this entirely** — see [TechDesignBinaryTransfer.md](TechDesignBinaryTransfer.md).
 
 ## 2. JSON output contract
 
@@ -34,7 +34,7 @@ Every successful subcommand prints exactly one single-line JSON object to stdout
 
 **Byte-count semantics.** `bytes_written` / `bytes_read` are wire-level counts from `viWrite` / `viRead` — they include the auto-appended `\n` on text writes and the termination char on text reads. The trimmed `response` string strips trailing `\r`/`\n`; raw byte counts do not.
 
-**Read loop semantics (text).** A `viRead` may complete with `VI_SUCCESS_TERM_CHAR` (termchar matched), `VI_SUCCESS` (count satisfied), or `VI_SUCCESS_MAX_CNT` (buffer full, more pending). The text read loop ends on the first two, continues on `MAX_CNT`, accepts-and-ends on any other positive warning, and throws on negative status. (Binary read loop: [TDDBinaryTransfer.md](TDDBinaryTransfer.md) §3.)
+**Read loop semantics (text).** A `viRead` may complete with `VI_SUCCESS_TERM_CHAR` (termchar matched), `VI_SUCCESS` (count satisfied), or `VI_SUCCESS_MAX_CNT` (buffer full, more pending). The text read loop ends on the first two, continues on `MAX_CNT`, accepts-and-ends on any other positive warning, and throws on negative status. (Binary read loop: [TechDesignBinaryTransfer.md](TechDesignBinaryTransfer.md) §3.)
 
 ### 2.2 Error envelope
 
@@ -372,7 +372,7 @@ Low-level USB-TMC control-pipe write (`viUsbControlOut`).
 
 ### 3.18 `read-block` (new — G-S6)
 
-Send a query and read a binary IEEE 488.2 block to a file. Framing logic: [TDDBinaryTransfer.md](TDDBinaryTransfer.md) §4.
+Send a query and read a binary IEEE 488.2 block to a file. Framing logic: [TechDesignBinaryTransfer.md](TechDesignBinaryTransfer.md) §4.
 
 **Usage:** `read-block <address> <command> --out-file <path> [--raw] [--timeout <ms>] [serial flags]`
 
@@ -401,7 +401,7 @@ Send a query and read a binary IEEE 488.2 block to a file. Framing logic: [TDDBi
 
 ### 3.19 `write-block` (new — G-S6)
 
-Write a binary IEEE 488.2 block from a file. Framing logic: [TDDBinaryTransfer.md](TDDBinaryTransfer.md) §5.
+Write a binary IEEE 488.2 block from a file. Framing logic: [TechDesignBinaryTransfer.md](TechDesignBinaryTransfer.md) §5.
 
 **Usage:** `write-block <address> --in-file <path> [<command>] [--raw] [--timeout <ms>] [serial flags]`
 
@@ -512,7 +512,7 @@ Verbosity via `VISA_LOG_LEVEL`: `quiet` (no output), `info` (default — one lin
 
 ## 8. Versioning
 
-This document and the parent TDD describe **v1** of the visa-skill. Adding a new subcommand, flag, or error class is a TDD amendment opened as a refactor session under `docs/build-session/<session-name>/`; the build agent must not invent these inline.
+This document and the parent TechDesign describe **v1** of the visa-skill. Adding a new subcommand, flag, or error class is a TechDesign amendment opened as a refactor session under `docs/build-session/<session-name>/`; the build agent must not invent these inline.
 
 ## 9. SKILL.md structure — progressive disclosure
 

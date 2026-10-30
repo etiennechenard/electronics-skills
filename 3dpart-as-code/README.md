@@ -32,7 +32,9 @@ Then:
   every probe within tolerance; `MESH PROBLEMS: 0`: watertight, oriented,
   one shell, inside the printer, volume matching the solid) → `fit.cs`
   (`FIT PROBLEMS: 0`: no overlap, every gap, every insertion path clear) →
-  `render.cs` (PNG views for people and reviewers) → `export.cs` (refuses
+  `render.cs` (PNG views for people and reviewers: print poses, the
+  assembly with the real KiCad boards in place, open / cutaway / exploded
+  views of the inside) → `export.cs` (refuses
   anything stale or dirty; writes `mech/out/`: STL per printed body in print
   orientation, STEP, assembly, renders, manifest).
 - **Two modes.** *Design* invents a part — an enclosure whose slots, seats
@@ -67,10 +69,12 @@ Then:
     │   │                    project structure, dotnet conventions
     │   ├── templates/       copied into a project's mech/tools/ (and parts/):
     │   │     partmodel.cs   the model types: Param, Fit, Body, ExpectedDim,
-    │   │                    FitCheck, SweepCheck, Envelope, Measurement, Model
+    │   │                    FitCheck, SweepCheck, Envelope, Measurement,
+    │   │                    Board, AssemblyView, Model
     │   │     part.cs        the project's model — ships a worked example
     │   │                    (L-bracket, slip-fit pin, hole coupon)
-    │   │     mech.cs        mech/ layout, build inputs, the venv runner
+    │   │     mech.cs        mech/ layout, build inputs, the kicad-cli board
+    │   │                    exports, the venv runner
     │   │     stl.cs         STL read/write + mesh checks, envelope, overhang
     │   │     raster.cs      dependency-free renderer → PNG
     │   │     checks.cs      the DIM / MESH / FIT / staleness gates
@@ -95,7 +99,9 @@ Then:
 - **Python 3.12** (`py -3.12` on Windows): build123d's OpenCascade wheels
   lag new Python releases. `build.cs` creates `mech/.venv` and installs the
   pinned `requirements.txt` on first run (a few hundred MB).
-- **KiCad 10** (`kicad-cli`) only to export mating boards as STEP.
+- **KiCad 10** (`kicad-cli`) only for parts that mate with boards: `build.cs`
+  exports the boards `part.cs` shows (with their parts' 3D models) on every
+  build, for the assembly renders and `assembly.step`.
 - Any CAD viewer (Fusion 360 works) to look at the STEP files; any slicer
   for the STLs.
 

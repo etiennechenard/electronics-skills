@@ -8,13 +8,13 @@ public static class AttrRegistry
 
     private static readonly Dictionary<string, AttrEntry> _map = new()
     {
-        // Carried-over general attributes (TDDCliContract §6 table 1)
+        // Carried-over general attributes (TechDesignCliContract §6 table 1)
         ["VI_ATTR_TMO_VALUE"]    = new(0x3FFF001A, AttrType.U32),
         ["VI_ATTR_TERMCHAR"]     = new(0x3FFF0018, AttrType.U8),
         ["VI_ATTR_TERMCHAR_EN"]  = new(0x3FFF0038, AttrType.Boolean),
         ["VI_ATTR_SEND_END_EN"]  = new(0x3FFF0016, AttrType.Boolean),
 
-        // Serial (ASRL) attributes (TDDCliContract §6 table 2)
+        // Serial (ASRL) attributes (TechDesignCliContract §6 table 2)
         ["VI_ATTR_ASRL_BAUD"]       = new(0x3FFF0021, AttrType.U32),
         ["VI_ATTR_ASRL_DATA_BITS"]  = new(0x3FFF0022, AttrType.U16),
         ["VI_ATTR_ASRL_PARITY"]     = new(0x3FFF0023, AttrType.U16),
