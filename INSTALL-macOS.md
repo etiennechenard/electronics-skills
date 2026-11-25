@@ -5,8 +5,8 @@ This repository ships five Claude Code (and ZCode) plugins. As of the `macos-sup
 | Plugin | On macOS | Verification status |
 |---|---|---|
 | `parts-search` | API keys in the login **Keychain** (instead of the Windows Credential Manager) | Tested (full suite + a real Keychain round-trip) |
-| `pcb-as-code` | KiCad from `/Applications/KiCad` or Homebrew; Java/FreeRouting auto-detected | Tested (full suite against a real kicad-cli 10.0.3); FreeRouting routing not run |
-| `3dpart-as-code` | Already cross-platform (venv at `mech/.venv/bin/python`) | Unchanged, docs adjusted |
+| `pcb-as-code` | KiCad from `/Applications/KiCad` or Homebrew; Java/FreeRouting auto-detected | Tested (full suite against a real kicad-cli 10.0.3; ERC, DRC, netlist, DSN and a FreeRouting 1.4.5.1 route on a real two-layer project) |
+| `3dpart-as-code` | Already cross-platform (venv at `mech/.venv/bin/python`) | Tested (full suite with the live build123d pipeline); one locale fix in the measurement sheet, docs adjusted |
 | `visa` | `VISA.framework` (NI-VISA) or `RsVisa.framework` (R&S VISA) | Tested without VISA installed; not tested against real instruments |
 | `micro-cap` | Micro-Cap 12 (a Windows app) launched **through Wine** by `mc12-mac.sh` | Launcher tested with a fake Wine; **Micro-Cap under Wine not yet verified** |
 
