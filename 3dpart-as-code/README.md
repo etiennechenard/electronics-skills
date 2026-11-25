@@ -96,7 +96,7 @@ Then:
 ## Prerequisites
 
 - **.NET SDK 10.0.300+** (file-based apps with `#:include`).
-- **Python 3.12** (`py -3.12` on Windows): build123d's OpenCascade wheels
+- **Python 3.12** (`py -3.12` on Windows, `python3.12` on macOS — e.g. `brew install python@3.12`): build123d's OpenCascade wheels
   lag new Python releases. `build.cs` creates `mech/.venv` and installs the
   pinned `requirements.txt` on first run (a few hundred MB).
 - **KiCad 10** (`kicad-cli`) only for parts that mate with boards: `build.cs`

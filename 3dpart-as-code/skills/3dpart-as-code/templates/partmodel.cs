@@ -420,8 +420,11 @@ public sealed class Model
         {
             var p = P(m.Param);
             var known = p.Source is Source.Measured or Source.Datasheet;
+            // The nested value text is formatted on its own: an inner $"..." would
+            // take the current culture (10,02 on a French system), not the outer one.
+            var value = known ? p.Value.ToString("0.###", CultureInfo.InvariantCulture) + " " + p.Unit : "—";
             w.AppendLine(string.Create(CultureInfo.InvariantCulture,
-                $"| {m.Id} | {m.What} | `{p.Name}` | {(known ? $"{p.Value:0.###} {p.Unit}" : "—")} | ±{p.Tol:0.###} | {(p.Critical ? "yes" : "")} | {Lower(p.Source)}{(p.Ref.Length > 0 ? $" ({p.Ref})" : "")} |"));
+                $"| {m.Id} | {m.What} | `{p.Name}` | {value} | ±{p.Tol:0.###} | {(p.Critical ? "yes" : "")} | {Lower(p.Source)}{(p.Ref.Length > 0 ? $" ({p.Ref})" : "")} |"));
         }
         return w.ToString();
     }
