@@ -1,6 +1,6 @@
 # micro-cap
 
-A plugin for running Micro-Cap 12 (Spectrum Software) circuit simulations headlessly on Windows, installed from the `electronics-skills` plugin marketplace. Micro-Cap is a GUI circuit simulator, but it supports a batch mode (`mc12_64.exe @controlfile`) that runs analyses and writes plain-text numeric output. Claude reads the skill, writes the SPICE netlist and the batch control file, launches and polls `mc12_64.exe` from the command line, and parses the numeric results — no GUI interaction. The plugin ships no scripts or compiled tooling; the skill is the verified workflow, learned once so every session skips the traps.
+A plugin for running Micro-Cap 12 (Spectrum Software) circuit simulations headlessly on Windows — or on macOS through Wine — installed from the `electronics-skills` plugin marketplace. Micro-Cap is a GUI circuit simulator, but it supports a batch mode (`mc12_64.exe @controlfile`) that runs analyses and writes plain-text numeric output. Claude reads the skill, writes the SPICE netlist and the batch control file, launches and polls `mc12_64.exe` from the command line, and parses the numeric results — no GUI interaction. The plugin ships no compiled tooling — only a small bash launcher for macOS/Wine; the skill is the verified workflow, learned once so every session skips the traps.
 
 ## How it works
 
@@ -17,9 +17,9 @@ Mixed-signal too: digital primitives (gates, DFF/JKFF, tristate), 74xx library s
 
 | Requirement | Notes |
 |---|---|
-| Windows 10/11 x64 | Batch mode drives the 64-bit `mc12_64.exe`. |
-| Micro-Cap 12 | Installed at `C:\MC12` — the skill's verified paths assume this location. Verified on Micro-Cap 12.2.0.5 (64-bit), Windows 10. |
-| Nothing else | No SDK, no dependencies — the skill drives `mc12_64.exe` directly with built-in PowerShell. |
+| Windows 10/11 x64, or macOS with Wine | Batch mode drives the 64-bit `mc12_64.exe` — natively on Windows; on macOS under Wine (Gcenx's build — `brew install --cask --no-quarantine gcenx/wine/wine-crossover` — or CrossOver; the official Homebrew `wine-stable` cask is disabled since 2026-09-01; Rosetta 2 on Apple Silicon) via the bundled `skills/micro-cap/scripts/mc12-mac.sh` launcher. The macOS path is **not yet verified** against a live Micro-Cap install. |
+| Micro-Cap 12 | Installed at `C:\MC12` — the skill's verified paths assume this location (macOS: `C:\MC12` inside the Wine prefix `~/.wine-mc12`, i.e. `~/.wine-mc12/drive_c/MC12`). Verified on Micro-Cap 12.2.0.5 (64-bit), Windows 10. |
+| Nothing else | No SDK, no dependencies — the skill drives `mc12_64.exe` directly with built-in PowerShell (Windows) or a bash launcher script (macOS). |
 
 ## Uninstall
 
