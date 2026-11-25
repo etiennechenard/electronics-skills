@@ -10,7 +10,7 @@
     {
       "name": "micro-cap",
       "source": "./micro-cap",
-      "description": "Run Micro-Cap 12 circuit simulations headlessly (batch mode): write SPICE netlists, run AC/transient/DC/distortion analyses and digital/mixed-signal logic (gates, flip-flops, 74xx families, power-up sequencing), and parse the numeric output files."
+      "description": "Run Micro-Cap 12 circuit simulations headlessly (batch mode; Windows, or macOS through Wine): write SPICE netlists, run AC/transient/DC/distortion analyses and digital/mixed-signal logic (gates, flip-flops, 74xx families, power-up sequencing), and parse the numeric output files."
     },
     {
       "name": "3dpart-as-code",
@@ -20,7 +20,7 @@
     {
       "name": "parts-search",
       "source": "./parts-search",
-      "description": "Search electronic parts across DigiKey, Mouser, and Newark (element14) by MPN, distributor part code, or keyword — normalized stock, unit price at quantity, price breaks, lifecycle status, and product URLs where the vendor provides them, with an as-of timestamp; find variants and substitute candidates with explainable reasons; pull one part's full parameter table and datasheets; re-validate a shortlist of MPNs in one batch check; and set up, list, test, or clear vendor API keys in the Windows Credential Manager."
+      "description": "Search electronic parts across DigiKey, Mouser, and Newark (element14) by MPN, distributor part code, or keyword — normalized stock, unit price at quantity, price breaks, lifecycle status, and product URLs where the vendor provides them, with an as-of timestamp; find variants and substitute candidates with explainable reasons; pull one part's full parameter table and datasheets; re-validate a shortlist of MPNs in one batch check; and set up, list, test, or clear vendor API keys in the Windows Credential Manager or the macOS Keychain."
     },
     {
       "name": "pcb-as-code",
@@ -30,7 +30,7 @@
     {
       "name": "visa",
       "source": "./visa",
-      "description": "Control VISA-addressable lab instruments (DMMs, scopes, power supplies, signal generators) over GPIB, USB-TMC, Serial/ASRL, or TCPIP/LXI — send SCPI commands, read measurements, control the bus, read/write VISA attributes, do USB-TMC control transfers, and move binary block payloads to/from files."
+      "description": "Control VISA-addressable lab instruments (DMMs, scopes, power supplies, signal generators) over GPIB, USB-TMC, Serial/ASRL, or TCPIP/LXI — send SCPI commands, read measurements, control the bus, read/write VISA attributes, do USB-TMC control transfers, and move binary block payloads to/from files — on Windows or macOS."
     }
   ]
 }
