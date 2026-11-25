@@ -63,7 +63,7 @@ public class MarketplaceRegistrationTests
         using var plugin = JsonDocument.Parse(File.ReadAllText(PluginJsonPath));
 
         Assert.Equal("parts-search", plugin.RootElement.GetProperty("name").GetString());
-        Assert.Equal("0.2.0", plugin.RootElement.GetProperty("version").GetString());
+        Assert.Equal("0.3.0", plugin.RootElement.GetProperty("version").GetString());
         Assert.False(string.IsNullOrWhiteSpace(plugin.RootElement.GetProperty("description").GetString()));
     }
 
@@ -129,9 +129,9 @@ public class MarketplaceRegistrationTests
     }
 
     private static bool AnyVendorConfigured() =>
-        new KeyConfig(new Win32CredentialStore()).IsConfigured(VendorId.Digikey)
-        || new KeyConfig(new Win32CredentialStore()).IsConfigured(VendorId.Mouser)
-        || new KeyConfig(new Win32CredentialStore()).IsConfigured(VendorId.Newark);
+        new KeyConfig(CredentialStores.CreateDefault()).IsConfigured(VendorId.Digikey)
+        || new KeyConfig(CredentialStores.CreateDefault()).IsConfigured(VendorId.Mouser)
+        || new KeyConfig(CredentialStores.CreateDefault()).IsConfigured(VendorId.Newark);
 
     [Fact]
     public void AnyCwdInvocation_UnknownFlag_Exits2WithOneJsonErrorObject()

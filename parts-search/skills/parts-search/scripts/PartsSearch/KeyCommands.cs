@@ -13,9 +13,12 @@ internal interface IKeyConsole
 }
 
 // Human-facing key-command I/O: prompts and notes go to stderr so stdout carries
-// exactly the one JSON result object. Prompts read line input with the console's
-// echo disabled — hidden like a ReadKey loop, but pasted text lands in the line
-// buffer instead of being dropped; the program itself never writes a secret.
+// exactly the one JSON result object. On Windows, prompts read line input with the
+// console's echo disabled — hidden like a ReadKey loop, but pasted text lands in the
+// line buffer instead of being dropped. On macOS/Linux the .NET console echoes line
+// input itself (stty -echo would not hide it), so prompts read intercepted keys until
+// Enter; a terminal paste arrives as ordinary key input there. The program itself
+// never writes a secret.
 internal sealed class KeyConsole : IKeyConsole
 {
     private const int StdInputHandle = -10;
@@ -25,7 +28,9 @@ internal sealed class KeyConsole : IKeyConsole
 
     public void WriteLine(string message) => Console.Error.WriteLine(message);
 
-    public string ReadLine()
+    public string ReadLine() => OperatingSystem.IsWindows() ? ReadLineWindows() : ReadLineUnix();
+
+    private static string ReadLineWindows()
     {
         var handle = GetStdHandle(StdInputHandle);
         _ = GetConsoleMode(handle, out var previousMode);
@@ -37,6 +42,27 @@ internal sealed class KeyConsole : IKeyConsole
         finally
         {
             _ = SetConsoleMode(handle, previousMode);
+        }
+    }
+
+    private static string ReadLineUnix()
+    {
+        var buffer = new System.Text.StringBuilder();
+        while (true)
+        {
+            var key = Console.ReadKey(intercept: true);
+            switch (key.Key)
+            {
+                case ConsoleKey.Enter:
+                    return buffer.ToString();
+                case ConsoleKey.Backspace:
+                    if (buffer.Length > 0) buffer.Length--;
+                    break;
+                default:
+                    if (key.KeyChar == '\n' || key.KeyChar == '\r') return buffer.ToString();
+                    if (!char.IsControl(key.KeyChar)) buffer.Append(key.KeyChar);
+                    break;
+            }
         }
     }
 
@@ -140,7 +166,7 @@ internal sealed class KeyCommands
     private static string SourceText(SecretSource source) => source switch
     {
         SecretSource.Env => "env",
-        SecretSource.CredentialManager => "credential manager",
+        SecretSource.CredentialManager => CredentialStores.SourceName,
         _ => "none",
     };
 

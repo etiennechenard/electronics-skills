@@ -8,13 +8,16 @@ One CLI covers the whole lookup loop: `search` (by MPN, distributor part code, o
 
 | Requirement       | Notes                                                                                                                                                                                         |
 | ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Windows 10/11 x64 | Keys are stored in the Windows Credential Manager via P/Invoke. Linux/macOS are not supported.                                                                                                |
+| Windows 10/11 x64 or macOS | Keys are stored in the Windows Credential Manager or the macOS login Keychain via P/Invoke. Linux has no key store: use the environment variables below.                                     |
 | .NET 10 SDK       | Install from [dot.net](https://dot.net). Verify with `dotnet --version`.                                                                                                                      |
 | Vendor API keys   | Free-tier keys from DigiKey, Mouser, and element14. One-time setup per vendor — see below. The CLI runs with zero keys (every vendor reports `no_key`), so you can set keys up one at a time. |
 
 ## Key setup (one-time, about a minute per vendor)
 
-Keys are stored as generic credentials in the **Windows Credential Manager** under the `parts-search/` prefix (DPAPI-protected per user) — you never create environment variables by hand, and no key is ever written to a file or a repo.
+Keys are stored under the `parts-search/` prefix in the OS secret store — you never create environment variables by hand, and no key is ever written to a file or a repo:
+
+- **Windows** — generic credentials in the **Windows Credential Manager** (DPAPI-protected per user).
+- **macOS** — generic passwords in the **login Keychain** (service `parts-search/<vendor>/<field>`, account `parts-search`; visible in Keychain Access). The item trusts the `dotnet` binary that created it; if you later run from another .NET install, macOS asks once to allow Keychain access — choose *Always Allow*.
 
 **DigiKey** — needs an OAuth2 *client id* and *client secret*.
 
@@ -42,13 +45,13 @@ Where to get it: the [element14 Partner Portal](https://partner.element14.com) �
 dotnet run --project skills/parts-search/scripts/PartsSearch -- key set newark
 ```
 
-Prompts read console input with echo disabled (nothing is displayed; pasted values still register in any terminal); run these in your own terminal (a non-interactive shell refuses them). Empty input re-prompts.
+Prompts read console input hidden (nothing is displayed; pasted values still register in any terminal — Windows Terminal/PowerShell or macOS Terminal/iTerm2); run these in your own terminal (a non-interactive shell refuses them). Empty input re-prompts.
 
 **Verify** what is stored and whether the keys actually work:
 
 ```powershell
 dotnet run --project skills/parts-search/scripts/PartsSearch -- key list
-# per-vendor/per-secret configured state + resolved source (env / credential manager / none) — never values
+# per-vendor/per-secret configured state + resolved source (env / credential manager on Windows, keychain on macOS / none) — never values
 
 dotnet run --project skills/parts-search/scripts/PartsSearch -- key test
 # one live limit-1 search per configured vendor: pass | empty (suspect key type) | rejected | error | no_key
@@ -66,7 +69,7 @@ Stored secrets can be overridden per secret by environment variables — the CI 
 | Mouser  | `MOUSER_API_KEY`                             |
 | Newark  | `ELEMENT14_API_KEY`                          |
 
-`key list` shows which source each secret resolved from, and `key set` prints a warning when an existing environment variable will shadow the secret you just stored. The `key` commands write secrets only to Credential Manager entries — never environment variables, never secret files (`key test` also performs its documented response-cache write-through).
+`key list` shows which source each secret resolved from, and `key set` prints a warning when an existing environment variable will shadow the secret you just stored. The `key` commands write secrets only to Credential Manager / Keychain entries — never environment variables, never secret files (`key test` also performs its documented response-cache write-through).
 
 ## Usage
 
@@ -112,15 +115,21 @@ Two query behaviors are built in:
 
 ## Caching
 
-Vendor responses are cached under `%LOCALAPPDATA%\parts-search\cache\` for **24 hours** (keyed by vendor, request kind, query, limit, and market; quantity is not part of the key). The DigiKey OAuth token is cached alongside until near expiry. Entries older than 7 days are pruned automatically on each run.
+Vendor responses are cached under `%LOCALAPPDATA%\parts-search\cache\` (Windows) or `~/Library/Application Support/parts-search/cache/` (macOS) for **24 hours** (keyed by vendor, request kind, query, limit, and market; quantity is not part of the key). The DigiKey OAuth token is cached alongside until near expiry. Entries older than 7 days are pruned automatically on each run.
 
 Emptying the folder by hand is always safe — worst case is a cold cache and a fresh token on the next run:
 
 ```powershell
+# Windows
 Remove-Item -Recurse -Force "$env:LOCALAPPDATA\parts-search\cache\*"
 ```
 
-Outside that cache folder the tool writes nowhere else except its `parts-search/*` Credential Manager entries — and nothing is ever written inside any repository.
+```bash
+# macOS
+rm -rf ~/Library/Application\ Support/parts-search/cache/*
+```
+
+Outside that cache folder the tool writes nowhere else except its `parts-search/*` Credential Manager (Windows) or Keychain (macOS) entries — and nothing is ever written inside any repository.
 
 ## Logging / debug output
 
@@ -131,6 +140,8 @@ $env:PARTS_SEARCH_LOG_LEVEL = "quiet"   # no stderr output
 $env:PARTS_SEARCH_LOG_LEVEL = "info"    # one line per interaction (default)
 $env:PARTS_SEARCH_LOG_LEVEL = "debug"   # + request URLs (key params masked), byte counts, cache keys
 ```
+
+On macOS (zsh/bash): `export PARTS_SEARCH_LOG_LEVEL=debug`.
 
 Secrets are never logged: the program itself never writes a secret (the terminal echo of a pasted value is your own keystrokes), `key list` shows presence and source only, and in `debug` every URL query parameter whose name contains `key` is masked to `***`.
 
@@ -147,4 +158,4 @@ Per-vendor problems never change the exit code: a vendor without a key reports `
 
 ## Uninstall
 
-Remove the plugin through your client's plugin management UI (in Claude Code, `/plugin uninstall parts-search@electronics-skills`). Nothing is installed system-wide; the only residue is the `%LOCALAPPDATA%\parts-search\cache\` folder (safe to delete) and any `parts-search/*` Credential Manager entries (remove with `key clear <vendor>` per vendor).
+Remove the plugin through your client's plugin management UI (in Claude Code, `/plugin uninstall parts-search@electronics-skills`). Nothing is installed system-wide; the only residue is the `%LOCALAPPDATA%\parts-search\cache\` (Windows) or `~/Library/Application Support/parts-search/cache/` (macOS) folder (safe to delete) and any `parts-search/*` Credential Manager / Keychain entries (remove with `key clear <vendor>` per vendor).
