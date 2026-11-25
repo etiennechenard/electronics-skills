@@ -31,7 +31,7 @@ The only direct caller is Claude Code, which reads `skills/visa/SKILL.md`, learn
 
 **Hard constraints (non-functional).**
 
-- Windows-only (Windows 10/11 x64). Loads `visa32.dll` / `visa64.dll` via P/Invoke, picking the bitness that matches the running process.
+- Windows 10/11 x64 and macOS. Windows loads `visa32.dll` / `visa64.dll` via P/Invoke, picking the bitness that matches the running process; macOS loads `/Library/Frameworks/VISA.framework/VISA` (NI-VISA), then `/Library/Frameworks/RsVisa.framework/RsVisa` (R&S VISA), then `libvisa.dylib`; Linux probes `libvisa.so.0` / `libvisa.so` / `librsvisa.so` (untested). `VISA_LIBRARY` overrides on every OS. On 64-bit non-Windows, `viSetAttribute` is declared with a 64-bit `ViAttrState` (SysV/AAPCS64 leave the upper half of a 32-bit register unspecified).
 - .NET 8 SDK on `PATH`; the tool runs via `dotnet run`, not as a precompiled binary.
 - Requires a system-installed VISA implementation (NI-VISA, Keysight, R&S — any conforming `visa32`/`visa64`). No VISA binaries are vendored.
 - Single invocation form: `dotnet run --project skills/visa/scripts/Visa -- <subcommand> [args]`.
@@ -139,7 +139,7 @@ Components are grouped by project. The `Visa` CLI depends on `Visa.Core`; `Visa.
 
 **`Session/VisaBoard.cs`** — Static helpers for GPIB board-level ops (`SendIfc`, `ControlRen`, `ControlAtn`, `Command`) targeting an INTFC resource. (Carried over.)
 
-**`Session/VisaNative.cs`** — P/Invoke surface + the `DllImportResolver` selecting `visa32`/`visa64`. Carries the predecessor P/Invokes; adds `viUsbControlIn`, `viUsbControlOut`, and the width-matched `viGetAttribute` overloads needed for U16/U8/string attribute access (G-S4, G-S5). New attribute constants (`VI_ATTR_ASRL_*`) per [TechDesignCliContract.md](TechDesignCliContract.md) §6.
+**`Session/VisaNative.cs`** — P/Invoke surface + the `DllImportResolver` selecting `visa32`/`visa64` (Windows), the VISA frameworks (macOS), or `VISA_LIBRARY`. Carries the predecessor P/Invokes; adds `viUsbControlIn`, `viUsbControlOut`, and the width-matched `viGetAttribute` overloads needed for U16/U8/string attribute access (G-S4, G-S5). New attribute constants (`VI_ATTR_ASRL_*`) per [TechDesignCliContract.md](TechDesignCliContract.md) §6.
 
 **`Session/VisaStatus.cs` / `Session/VisaException.cs`** — Status-code constants, `IsError`/`IsWarning` predicates, the `Throw` helper attaching the driver's `viStatusDesc` text. (Carried over.)
 
@@ -314,6 +314,6 @@ Everything under the project root was produced by the initial build session. The
 
 - **Async events / SRQ handler installation.** A `wait-srq` subcommand on `viInstallHandler` / `viWaitOnEvent`.
 - **Locking.** `lock` / `unlock` subcommands for multi-process resource sharing.
-- **Cross-platform.** Linux support via NI-VISA-for-Linux / linux-gpib (`libvisa.so`); requires reworking the `DllImportResolver`.
+- **Cross-platform.** macOS is supported (see §1). Linux candidates are probed but untested against NI-VISA-for-Linux / linux-gpib.
 - **Software simulator.** A `SIM::<TYPE>::INSTR` resource scheme bypassing the real driver, enabling CI without hardware.
 - **Streaming binary transfer.** Chunked/streamed block reads for captures larger than memory.
