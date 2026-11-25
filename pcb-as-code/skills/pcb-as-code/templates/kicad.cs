@@ -11,13 +11,34 @@ namespace Kicad;
 
 public static class Cli
 {
-    /// kicad-cli path. The default is the known-good 10.0.7 install; set
-    /// the KICAD_CLI environment variable (or assign Exe) to run against a
-    /// newer KiCad — then re-run the test suite, whose live kicad-cli
-    /// tests verify the new install (the CLI surface and JSON report
+    public const string WindowsDefault = @"C:\Program Files\KiCad\10.0\bin\kicad-cli.exe";
+
+    public static readonly string[] MacCandidates =
+    [
+        "/Applications/KiCad/KiCad.app/Contents/MacOS/kicad-cli",
+        "/opt/homebrew/bin/kicad-cli",
+        "/usr/local/bin/kicad-cli",
+    ];
+
+    /// The per-OS default: the first macOS/Linux install that exists, else
+    /// the first candidate (so a missing install still names a real path).
+    public static string DefaultExe()
+    {
+        if (OperatingSystem.IsWindows())
+            return WindowsDefault;
+        string[] candidates = OperatingSystem.IsMacOS() ? MacCandidates : ["/usr/bin/kicad-cli", "/usr/local/bin/kicad-cli"];
+        return candidates.FirstOrDefault(File.Exists) ?? candidates[0];
+    }
+
+    /// kicad-cli path. The default is the known-good 10.0.7 install
+    /// (Windows: Program Files\KiCad\10.0; macOS: /Applications/KiCad, then
+    /// Homebrew); set the KICAD_CLI environment variable (or assign Exe) to
+    /// run against another KiCad — then re-run the test suite, whose live
+    /// kicad-cli tests verify the install (the CLI surface and JSON report
     /// formats used here have been stable).
+    // (Declared after MacCandidates: static initializers run in textual order.)
     public static string Exe { get; set; } =
-        Environment.GetEnvironmentVariable("KICAD_CLI") ?? @"C:\Program Files\KiCad\10.0\bin\kicad-cli.exe";
+        Environment.GetEnvironmentVariable("KICAD_CLI") ?? DefaultExe();
 
     /// Run kicad-cli, return stdout; throw with both streams on failure.
     public static string Run(params string[] args)

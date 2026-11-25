@@ -183,8 +183,39 @@ public static class Ses
 
 public static class FreeRouting
 {
-    public const string DefaultJava = @"C:\tools\jdk-25.0.4.1+1-jre\bin\java.exe";
-    public const string DefaultJar = @"C:\tools\freerouting-1.4.5.1\freerouting-1.4.5.1.jar";
+    /// Java 17+: FREEROUTING_JAVA wins; Windows keeps the known-good JRE under
+    /// C:\tools; macOS/Linux take JAVA_HOME, then Homebrew's openjdk, then the
+    /// newest /Library/Java/JavaVirtualMachines JDK, then /usr/bin/java.
+    public static readonly string DefaultJava =
+        Environment.GetEnvironmentVariable("FREEROUTING_JAVA") ?? FindJava();
+
+    /// FreeRouting jar: FREEROUTING_JAR wins; else C:\tools\... (Windows) or
+    /// ~/tools/... (macOS/Linux), same folder layout.
+    public static readonly string DefaultJar =
+        Environment.GetEnvironmentVariable("FREEROUTING_JAR")
+        ?? (OperatingSystem.IsWindows()
+            ? @"C:\tools\freerouting-1.4.5.1\freerouting-1.4.5.1.jar"
+            : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                "tools", "freerouting-1.4.5.1", "freerouting-1.4.5.1.jar"));
+
+    public static string FindJava()
+    {
+        if (OperatingSystem.IsWindows())
+            return @"C:\tools\jdk-25.0.4.1+1-jre\bin\java.exe";
+        var candidates = new List<string>();
+        var home = Environment.GetEnvironmentVariable("JAVA_HOME");
+        if (!string.IsNullOrEmpty(home))
+            candidates.Add(Path.Combine(home, "bin", "java"));
+        candidates.Add("/opt/homebrew/opt/openjdk/bin/java");
+        candidates.Add("/usr/local/opt/openjdk/bin/java");
+        const string jvms = "/Library/Java/JavaVirtualMachines";
+        if (Directory.Exists(jvms))
+            candidates.AddRange(Directory.EnumerateDirectories(jvms)
+                .OrderByDescending(d => d, StringComparer.Ordinal)
+                .Select(d => Path.Combine(d, "Contents", "Home", "bin", "java")));
+        candidates.Add("/usr/bin/java");
+        return candidates.FirstOrDefault(File.Exists) ?? "/usr/bin/java";
+    }
 
     /// Run FreeRouting headless: <c>java -Xmx3g -jar &lt;jar&gt; -de dsn -do ses -mp
     /// passes -mt threads</c>. threads defaults to 1 — the multi-threaded
