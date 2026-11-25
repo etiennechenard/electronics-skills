@@ -43,7 +43,7 @@ public class Program
 
     private static async Task<int> DispatchAsync(CliParse parse)
     {
-        var store = new Win32CredentialStore();
+        var store = CredentialStores.CreateDefault();
         var keyConfig = new KeyConfig(store);
         var clock = new SystemClock();
         var cache = new ResponseCache(clock);

@@ -57,7 +57,7 @@ Create the layout (see `project-structure.md`), then:
      pinned kernel on first run, a few minutes), then `check.cs`, `fit.cs`,
      `render.cs`, `sheet.cs`, `export.cs` on the example — every gate at 0 (`sheet.cs` and `export.cs` download the ClosedXML and Roslyn packages on their first run);
   3. `dotnet test mech/tools/tests` with `PAC_PYTHON` set to
-     `mech/.venv/Scripts/python.exe` (Windows) so the pipeline tests run
+     `mech/.venv/Scripts/python.exe` (Windows) or `mech/.venv/bin/python` (macOS/Linux) so the pipeline tests run
      live rather than early-returning.
 - **Replace the example.** Write the project's own `part.cs` (step 1) and
   scripts; delete `mech/parts/bracket.py` and `mech/out/`. The fixture in

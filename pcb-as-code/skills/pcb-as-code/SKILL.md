@@ -38,12 +38,12 @@ This file is the map; read the reference named for the stage you are working (pa
 
 | Tool | Fact |
 |---|---|
-| KiCad 10.0.7 | `C:\Program Files\KiCad\10.0\bin\kicad-cli.exe`, the default in `kicad.cs`; `KICAD_CLI` (or `Cli.Exe`) for a newer one — re-run the test suite to confirm it |
+| KiCad 10.0.7 | Windows `C:\Program Files\KiCad\10.0\bin\kicad-cli.exe`; macOS `/Applications/KiCad/KiCad.app/Contents/MacOS/kicad-cli`, then Homebrew `/opt/homebrew/bin/kicad-cli` / `/usr/local/bin/kicad-cli` — the per-OS default in `kicad.cs` (`Cli.DefaultExe()`); `KICAD_CLI` (or `Cli.Exe`) for another one — re-run the test suite to confirm it (macOS verified with 10.0.3) |
 | kicad-cli | `sch erc`, `sch export netlist/pdf`, `sch/sym/fp upgrade --force`, `pcb drc`, `pcb export gerbers/drill/pos/svg`, `pcb render`, `pcb upgrade` |
 | Zone fills | `pcb drc` and `pcb export gerbers` refill in memory (documented for both, verified for drc on 10.0.7 — re-check on a newer KiCad); `pcb drc --refill-zones --save-board` writes fills into the file (read with `Board.ZoneFills`). PDF/SVG exports do NOT refill — render a board saved that way |
 | Board text | s-expressions, no pcbnew dependency; KiCad 10 references nets by name (`(net "GND")`, no net table) |
 | Specctra DSN | kicad-cli has NO DSN export — `dsn.cs` writes it |
-| FreeRouting | 1.4.5.1 known-good default: `C:\tools\freerouting-1.4.5.1\freerouting-1.4.5.1.jar`, Java 17+ at `C:\tools\jdk-25.0.4.1+1-jre\bin\java.exe` (defaults in `specctra.cs`; `Route(java:, jar:)` overrides). 2.x takes the same CLI (2.5 needs Java 25) |
+| FreeRouting | 1.4.5.1 known-good default: jar at `C:\tools\freerouting-1.4.5.1\freerouting-1.4.5.1.jar` (Windows) or `~/tools/freerouting-1.4.5.1/freerouting-1.4.5.1.jar` (macOS); Java 17+ at `C:\tools\jdk-25.0.4.1+1-jre\bin\java.exe` (Windows) or, on macOS, `$JAVA_HOME`, Homebrew `openjdk`, the newest `/Library/Java/JavaVirtualMachines` JDK, then `/usr/bin/java` (defaults in `specctra.cs`; `FREEROUTING_JAR` / `FREEROUTING_JAVA` or `Route(java:, jar:)` override). 2.x takes the same CLI (2.5 needs Java 25) |
 | .NET SDK | 10.0.401 |
 | PlatformIO | `pio run`; native host tests in `firmware/test/native` |
 

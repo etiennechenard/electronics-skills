@@ -34,4 +34,51 @@ public class CredentialStoreTests
         Assert.Throws<ArgumentException>(() => store.Delete("other-app/secret"));
         Assert.Throws<ArgumentException>(() => store.Read("parts-searcher/evil"));
     }
+
+    [Fact]
+    public void MacKeychainStore_RefusesTargetsOutsideToolPrefix()
+    {
+        var store = new MacKeychainCredentialStore();
+        Assert.Throws<ArgumentException>(() => store.Read("other-app/secret"));
+        Assert.Throws<ArgumentException>(() => store.Write("other-app/secret", "x"));
+        Assert.Throws<ArgumentException>(() => store.Delete("other-app/secret"));
+        Assert.Throws<ArgumentException>(() => store.Read("parts-searcher/evil"));
+    }
+
+    [Fact]
+    public void CreateDefault_PicksTheOsStore()
+    {
+        var store = CredentialStores.CreateDefault();
+        if (OperatingSystem.IsWindows()) Assert.IsType<Win32CredentialStore>(store);
+        else if (OperatingSystem.IsMacOS()) Assert.IsType<MacKeychainCredentialStore>(store);
+        else Assert.IsType<NullCredentialStore>(store);
+    }
+
+    // Opt-in (PARTS_SEARCH_KEYCHAIN_TEST=1): writes, overwrites, reads and deletes one
+    // throwaway item in the real login Keychain.
+    [SkippableFact]
+    public void MacKeychainStore_RoundTripsAgainstTheRealKeychain()
+    {
+        Skip.IfNot(OperatingSystem.IsMacOS(), "macOS only");
+        Skip.IfNot(Environment.GetEnvironmentVariable("PARTS_SEARCH_KEYCHAIN_TEST") == "1",
+            "set PARTS_SEARCH_KEYCHAIN_TEST=1 to touch the real login Keychain");
+
+        var store = new MacKeychainCredentialStore();
+        var target = $"{CredentialTargets.TargetPrefix}test/{Guid.NewGuid():N}";
+        try
+        {
+            Assert.Null(store.Read(target));
+            store.Write(target, "first-värde");
+            Assert.Equal("first-värde", store.Read(target));
+            store.Write(target, "second");
+            Assert.Equal("second", store.Read(target));
+            Assert.True(store.Delete(target));
+            Assert.Null(store.Read(target));
+            Assert.False(store.Delete(target));
+        }
+        finally
+        {
+            store.Delete(target);
+        }
+    }
 }

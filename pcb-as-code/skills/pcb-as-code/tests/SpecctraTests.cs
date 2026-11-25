@@ -245,7 +245,7 @@ public class SpecctraTests : IDisposable
         var dsn = TempFile("x.dsn", SampleDsn);
         var ex = Assert.Throws<FileNotFoundException>(() =>
             FreeRouting.Route(dsn, Path.Combine(_dir, "x.ses"),
-                java: Path.Combine(_dir, "no-java.exe"), jar: Path.Combine(_dir, "no-fr.jar")));
+                java: Path.Combine(_dir, OperatingSystem.IsWindows() ? "no-java.exe" : "no-java"), jar: Path.Combine(_dir, "no-fr.jar")));
         Assert.Contains("FreeRouting not installed", ex.Message);
     }
 }

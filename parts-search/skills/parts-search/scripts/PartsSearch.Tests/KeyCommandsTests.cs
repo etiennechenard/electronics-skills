@@ -144,10 +144,10 @@ public class KeyCommandsTests
 
             using var document = Parse(json);
             var vendors = document.RootElement.GetProperty("vendors");
-            Assert.Equal("credential manager", vendors.GetProperty("digikey").GetProperty("client-id").GetProperty("source").GetString());
-            Assert.Equal("credential manager", vendors.GetProperty("digikey").GetProperty("client-secret").GetProperty("source").GetString());
+            Assert.Equal(CredentialStores.SourceName, vendors.GetProperty("digikey").GetProperty("client-id").GetProperty("source").GetString());
+            Assert.Equal(CredentialStores.SourceName, vendors.GetProperty("digikey").GetProperty("client-secret").GetProperty("source").GetString());
             Assert.Equal(2, vendors.GetProperty("digikey").EnumerateObject().Count());
-            Assert.Equal("credential manager", vendors.GetProperty("mouser").GetProperty("api-key").GetProperty("source").GetString());
+            Assert.Equal(CredentialStores.SourceName, vendors.GetProperty("mouser").GetProperty("api-key").GetProperty("source").GetString());
             var newark = vendors.GetProperty("newark");
             Assert.Equal("env", newark.GetProperty("api-key").GetProperty("source").GetString());
             Assert.Equal(1, newark.EnumerateObject().Count());

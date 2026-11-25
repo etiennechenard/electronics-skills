@@ -6,9 +6,14 @@ A plugin for controlling VISA-addressable laboratory instruments over GPIB, USB-
 
 | Requirement       | Notes                                                                                                                                                                                          |
 | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Windows 10/11 x64 | The skill uses `visa32.dll` / `visa64.dll` via P/Invoke. Linux/macOS are not supported.                                                                                                        |
+| Windows 10/11 x64 or macOS | Windows: `visa32.dll` / `visa64.dll` via P/Invoke. macOS: `/Library/Frameworks/VISA.framework/VISA` (NI-VISA) or `/Library/Frameworks/RsVisa.framework/RsVisa` (R&S VISA). `VISA_LIBRARY=<path>` overrides on any OS. |
 | .NET 8 SDK        | Install from [dot.net](https://dot.net). Verify with `dotnet --version`.                                                                                                                       |
 | VISA driver       | NI-VISA, Keysight IO Libraries Suite, R&S VISA, or any vendor library that exports the IVI-Foundation VISA C API (`visa32.dll` / `visa64.dll`). Install from your instrument vendor's website. |
+
+
+### macOS notes
+
+**macOS:** install **NI-VISA for macOS** (`/Library/Frameworks/VISA.framework`) or **R&S VISA for macOS** (`/Library/Frameworks/RsVisa.framework`); the skill finds either automatically, or set `VISA_LIBRARY` to the library path. The VISA library must match the CPU architecture of the `dotnet` process: on Apple Silicon, an Intel-only (x86_64) VISA framework needs the x64 .NET SDK run under Rosetta (`arch -x86_64 /usr/local/share/dotnet/x64/dotnet run …`) — exit code 3 names the mismatch (`incompatible architecture`). GPIB needs the vendor's macOS GPIB driver (e.g. NI-488.2); TCPIP/LXI and USB-TMC work with the VISA library alone.
 
 ## Usage
 
@@ -164,7 +169,7 @@ Stderr contains only human-readable trace lines. Stdout contains only the JSON e
 | 0    | Success                | Stdout JSON has `"ok": true`.                                                                                                               |
 | 1    | VISA error             | Check `status` / `description` in the JSON. Common causes: timeout, resource not open, wrong address.                                       |
 | 2    | Usage error            | Bad argument, unknown flag, missing required positional, or invalid value. Check the `description` field. Run the subcommand with `--help`. |
-| 3    | VISA library not found | Install NI-VISA or another VISA implementation. Verify `visa32.dll` / `visa64.dll` is on the system path.                                   |
+| 3    | VISA library not found | Install NI-VISA or another VISA implementation. Windows: verify `visa32.dll` / `visa64.dll` is on the system path. macOS: verify the framework is installed and matches the `dotnet` architecture (see below). |
 | 4    | Internal error         | A bug in the CLI. File an issue.                                                                                                            |
 
 ## Troubleshooting

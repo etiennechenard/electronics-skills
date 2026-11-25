@@ -13,7 +13,7 @@ public class LiveSearchTests
 
     private static bool VendorConfigured(VendorId vendor)
     {
-        var keyConfig = new KeyConfig(new Win32CredentialStore());
+        var keyConfig = new KeyConfig(CredentialStores.CreateDefault());
         return vendor switch
         {
             VendorId.Digikey => keyConfig.GetSecret(VendorId.Digikey, CredentialTargets.ClientIdField) is not null
@@ -27,7 +27,7 @@ public class LiveSearchTests
     // (the DigiKey token persists there across legs).
     private static SearchService LiveService()
     {
-        var store = new Win32CredentialStore();
+        var store = CredentialStores.CreateDefault();
         var keyConfig = new KeyConfig(store);
         var clock = new SystemClock();
         var cache = new ResponseCache(clock);

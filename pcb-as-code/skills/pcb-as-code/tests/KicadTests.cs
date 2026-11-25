@@ -101,6 +101,17 @@ public class KicadTests : IDisposable
 
     public static bool KiCadInstalled => File.Exists(Cli.Exe);
 
+    [Fact]
+    public void DefaultExe_IsThePerOsInstall()
+    {
+        var exe = Cli.DefaultExe();
+        if (OperatingSystem.IsWindows())
+            Assert.Equal(Cli.WindowsDefault, exe);
+        else if (OperatingSystem.IsMacOS())
+            Assert.Equal(Cli.MacCandidates.FirstOrDefault(File.Exists) ?? Cli.MacCandidates[0], exe);
+        Assert.EndsWith(OperatingSystem.IsWindows() ? "kicad-cli.exe" : "kicad-cli", exe);
+    }
+
     private const string CleanBoard = """
         (kicad_pcb
           (version 20250114)

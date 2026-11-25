@@ -21,9 +21,9 @@ Use this skill whenever the user needs to:
 
 ## Prerequisites
 
-1. **VISA driver installed** — NI-VISA, Keysight VISA, R&S VISA, or any vendor VISA library that exports the IVI-Foundation C API (`visa32.dll` / `visa64.dll`). Install from the vendor's website before using this skill.
+1. **VISA driver installed** — NI-VISA, Keysight VISA, R&S VISA, or any vendor VISA library that exports the IVI-Foundation C API (`visa32.dll` / `visa64.dll` on Windows; `VISA.framework` / `RsVisa.framework` on macOS). Install from the vendor's website before using this skill. `VISA_LIBRARY=<path>` overrides the library on any OS.
 2. **.NET 8 SDK on PATH** — `dotnet --version` should report 8.x or later.
-3. **Windows 10/11 x64** — this skill is Windows-only.
+3. **Windows 10/11 x64 or macOS** (Apple Silicon or Intel). **macOS:** install **NI-VISA for macOS** (`/Library/Frameworks/VISA.framework`) or **R&S VISA for macOS** (`/Library/Frameworks/RsVisa.framework`); the skill finds either automatically, or set `VISA_LIBRARY` to the library path. The VISA library must match the CPU architecture of the `dotnet` process: on Apple Silicon, an Intel-only (x86_64) VISA framework needs the x64 .NET SDK run under Rosetta (`arch -x86_64 /usr/local/share/dotnet/x64/dotnet run …`) — exit code 3 names the mismatch (`incompatible architecture`). GPIB needs the vendor's macOS GPIB driver (e.g. NI-488.2); TCPIP/LXI and USB-TMC work with the VISA library alone.
 
 ## Invocation form
 
@@ -142,7 +142,7 @@ Every invocation prints exactly one JSON object to stdout and exits.
 | 0 | Success — stdout JSON has `"ok": true` |
 | 1 | VISA error — a VISA C function returned a negative status |
 | 2 | Usage error — bad argument, unknown flag, missing required arg, unreadable `--in-file`, block parse failure |
-| 3 | VISA library not found — `visa32.dll` / `visa64.dll` not installed (`visa_library_missing`) |
+| 3 | VISA library not found — `visa32.dll` / `visa64.dll` (Windows) or `VISA.framework` / `RsVisa.framework` (macOS) not installed, or built for another CPU architecture (`visa_library_missing`; the description lists every path tried) |
 | 4 | Internal error — unexpected exception |
 
 ## Stderr logging

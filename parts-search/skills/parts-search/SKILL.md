@@ -1,6 +1,6 @@
 ---
 name: parts-search
-description: Search electronic parts across DigiKey, Mouser, and Newark (element14) by MPN, distributor part code, or keyword — normalized stock, unit price at quantity, price breaks, lifecycle status, and product URLs where the vendor provides them, with an as-of timestamp; find variants and substitute candidates with explainable reasons; pull one part's full parameter table and datasheets; re-validate a shortlist of MPNs in one batch check; and set up, list, test, or clear vendor API keys in the Windows Credential Manager.
+description: Search electronic parts across DigiKey, Mouser, and Newark (element14) by MPN, distributor part code, or keyword — normalized stock, unit price at quantity, price breaks, lifecycle status, and product URLs where the vendor provides them, with an as-of timestamp; find variants and substitute candidates with explainable reasons; pull one part's full parameter table and datasheets; re-validate a shortlist of MPNs in one batch check; and set up, list, test, or clear vendor API keys in the Windows Credential Manager or the macOS Keychain.
 ---
 
 # parts-search-skill
@@ -13,13 +13,13 @@ Use this skill whenever the user needs to:
 - Find variants of a known part and substitute candidates from the same category, each with an explainable `reason`
 - Get one part's full detail: parameter table and datasheet links
 - Re-validate a shortlist of exact MPNs across all vendors in one invocation (pre-order stock check)
-- Set up, list, test, or clear the vendor API keys (one-time setup, Windows Credential Manager)
+- Set up, list, test, or clear the vendor API keys (one-time setup, Windows Credential Manager or macOS Keychain)
 
 ## Prerequisites
 
 1. **.NET 10 SDK on PATH** — `dotnet --version` should report 10.x or later.
-2. **Windows 10/11 x64** — this skill is Windows-only.
-3. **One-time `key set` per vendor** — vendors without a configured key report `status: "no_key"` and are simply skipped; the CLI still works with zero keys. Keys live in the Windows Credential Manager, entered once via `parts-search key set <vendor>` (prompts are hidden — echo-disabled input; pasted values register; about a minute per vendor). Direct the user to run this in their own terminal — it needs an interactive console.
+2. **Windows 10/11 x64 or macOS** — keys live in the Windows Credential Manager or the macOS login Keychain (on Linux there is no key store; only the environment variables work).
+3. **One-time `key set` per vendor** — vendors without a configured key report `status: "no_key"` and are simply skipped; the CLI still works with zero keys. Keys live in the OS secret store (Windows Credential Manager / macOS login Keychain), entered once via `parts-search key set <vendor>` (prompts are hidden; pasted values register; about a minute per vendor). Direct the user to run this in their own terminal — it needs an interactive console.
 
 ## Invocation form
 
@@ -40,7 +40,7 @@ The `--` separator is required. `${CLAUDE_PLUGIN_ROOT}` is substituted with this
 | `key set <vendor>` | Store a vendor's secrets (hidden prompts) | vendor token: `digikey` \| `mouser` \| `newark` |
 | `key list` | Per-vendor/per-secret configured state + source — never values | — |
 | `key test` | Live probe per configured vendor (one limit-1 search on the fixed query `resistor`) | — |
-| `key clear <vendor>` | Delete this tool's Credential Manager entries for a vendor | vendor token: `digikey` \| `mouser` \| `newark` |
+| `key clear <vendor>` | Delete this tool's Credential Manager / Keychain entries for a vendor | vendor token: `digikey` \| `mouser` \| `newark` |
 
 **Flag rules (all commands):**
 - Long-form flags (`--name value`) only. No short flags; `--flag=value` syntax is not supported.
@@ -52,7 +52,7 @@ The `--` separator is required. `${CLAUDE_PLUGIN_ROOT}` is substituted with this
 
 ## Common examples
 
-```powershell
+```bash
 # Exact-MPN search at a build quantity
 dotnet run --project "${CLAUDE_PLUGIN_ROOT}/skills/parts-search/scripts/PartsSearch" -- search --q "TPIC6B595DWR" --qty 10
 
